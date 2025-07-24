@@ -5,9 +5,9 @@
 posterior_bin_sim = function(M = 10000, alphas, betas)
 {
   # Simulate M samples from the posterior Beta distribution for Arm 1
-  arm1 = rbeta(M, alphas[1], betas[1])
+  arm1 = stats::rbeta(M, alphas[1], betas[1])
   # Simulate M samples from the posterior Beta distribution for Arm 2
-  arm2 = rbeta(M, alphas[2], betas[2])
+  arm2 = stats::rbeta(M, alphas[2], betas[2])
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
@@ -47,8 +47,8 @@ posterior_bin_exact = function(alphas, betas)
 # determining which arm's sampled mean is the highest.
 posterior_norm_sim = function(M = 10000, means, sds)
 {
-  arm1 = rnorm(M, means[1], sds[1])
-  arm2 = rnorm(M, means[2], sds[2])
+  arm1 = stats::rnorm(M, means[1], sds[1])
+  arm2 = stats::rnorm(M, means[2], sds[2])
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.

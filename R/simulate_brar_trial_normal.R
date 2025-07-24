@@ -78,7 +78,7 @@
 
     selected_arm[burnin_indices] <- blockrand::blockrand(burnin, arms, block.sizes = 1, levels = seq(1, arms, by = 1))$treatment
 
-    outcomes[burnin_indices] <- rnorm(burnin,
+    outcomes[burnin_indices] <- stats::rnorm(burnin,
                                       mean = true_means[selected_arm[burnin_indices]],
                                       sd = true_sds[selected_arm[burnin_indices]])
 
@@ -193,7 +193,7 @@
     }
 
     # --- Simulate Outcomes ---
-    outcomes[current_block_indices] <- rnorm(
+    outcomes[current_block_indices] <- stats::rnorm(
       current_block_size,
       mean = true_means[selected_arm[current_block_indices]],
       sd = true_sds[selected_arm[current_block_indices]]

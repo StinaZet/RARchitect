@@ -1,0 +1,55 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# RARchitect
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+A framework for simulating Response-Adaptive Randomization (RAR)
+clinical trial designs for different types of outcomes. Its purpose is
+to assist researchers and statisticians in designing RAR trials by
+allowing them to test various configurations and parameters, such as
+prior settings, allocation tuning and clipping strategies, and
+recruitment rates, through simulations.
+
+## Installation
+
+You can install the development version of RARchitect from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("StinaZet/RARchitect")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+``` r
+library(RARchitect)
+# Simulate a Binary Outcome Trial
+set.seed(101)
+results_binary <- simulate_brar_trial(
+ outcome_type = "binary",
+ arms = 2, N = 100, blocksize = 10,
+ modelpar = c(0.6, 0.4),
+ priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
+ tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
+ postprobmethod = "simulation",
+ recruitment_rate = 5,
+ observation_delay = 30
+)
+head(results_binary)
+#>   Batch Recruitment time Outcome time Arm Outcome AP arm 1 AP arm 2
+#> 1     1                0           30   2       0   0.5048   0.5048
+#> 2     1                0           30   2       0   0.5048   0.5048
+#> 3     1                0           30   1       1   0.5048   0.5048
+#> 4     1                0           30   1       1   0.5048   0.5048
+#> 5     1                0           30   1       1   0.5048   0.5048
+#> 6     1                0           30   1       1   0.4952   0.4952
+print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
+#> [1] "Observed success rate Arm 1: 0.615384615384615"
+```

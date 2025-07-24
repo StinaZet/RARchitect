@@ -1,9 +1,10 @@
 #' @title Simulate a Response Adaptive Randomization (RAR) Trial for Binary or Normal Outcomes
 #'
 #' @description
-#' This comprehensive function simulates a multi-arm clinical trial using Thompson Sampling
-#' with either a Beta-Bernoulli model for binary outcomes or a Normal-Normal conjugate
-#' model for normal outcomes (assuming known population variance). It also simulates trial
+#' This function simulates a multi-arm clinical trial using Bayesian Response-Adaptive
+#' Randomization (BRAR)/Thompson Sampling with either a Beta-Bernoulli model for
+#' binary outcomes or a Normal-Normal conjugate model for normal outcomes
+#' (assuming known population variance). It also simulates trial
 #' duration based on a Poisson recruitment process.
 #'
 #' @param outcome_type Character. Specifies the type of outcome to simulate.
@@ -33,8 +34,8 @@
 #' probabilities for each Bernoulli arm. e.g., `c(0.6, 0.4)`.
 #' \item If `outcome_type = "normal"`: A 2-row matrix specifying the true parameters
 #' for each normal arm. Each column corresponds to an arm. Rows should be:
-#' 1. `mean`: True mean for the arm.
-#' 2. `sd`: True standard deviation for the arm. This `sd` is assumed to be
+#' 1. True mean for the arm.
+#' 2. True standard deviation for the arm. It is assumed to be
 #' the known population standard deviation for the purpose of posterior updates.
 #' Example for two arms: `matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)`
 #' }
@@ -76,18 +77,12 @@
 #' @return A data frame with `N` rows and the following columns:
 #' \itemize{
 #' \item `Batch`: The block number for each participant.
+#' \item `Recruitment time`: The time point at which each participant is recruited.
+#' \item `Outcome time`: The time point at which each participant's outcome is observed.
 #' \item `Arm`: The arm selected for the participant (1 to `arms`).
 #' \item `Outcome`: The outcome associated with the selected arm (binary 0/1 for "binary",
 #' continuous for "normal").
-#' \item `AlloProb_ArmX`: For each arm X, the allocation probability of Arm X for that block.
-#' \item `EstimatedRecruitmentTime`: The average time point at which each participant
-#' is recruited, estimated across simulation runs for trial duration.
-#' \item `StdDevRecruitmentTime`: The standard deviation of recruitment times
-#' for each participant across simulation runs for trial duration.
-#' \item `EstimatedObservationTime`: The average time point at which each participant's
-#' outcome is observed, estimated across simulation runs for trial duration.
-#' \item `StdDevObservationTime`: The standard deviation of observation times
-#' for each participant across simulation runs for trial duration.
+#' \item `AP arm X`: For each arm X, the allocation probability of Arm X for that block.
 #' }
 #' @export
 #'
@@ -114,7 +109,7 @@
 #'
 #' results_normal <- simulate_brar_trial(
 #' outcome_type = "normal",
-#' arms = 2, N = 200, blocksize = 20,
+#' arms = 2, N = 200, blocksize = 10,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
 #' tuning = 0.5, clipping = "adaptive", burnin = 10, ensure_all_arms_sampled = TRUE,
@@ -128,9 +123,9 @@
 #' set.seed(103)
 #' results_binary_tuned <- simulate_brar_trial(
 #' outcome_type = "binary",
-#' arms = 3, N = 150, blocksize = 15,
-#' priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
-#' modelpar = c(0.7, 0.5, 0.3),
+#' arms = 2, N = 150, blocksize = 15,
+#' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
+#' modelpar = c(0.7, 0.5),
 #' tuning = 0.5,
 #' clipping = 0.05,
 #' burnin = 0,

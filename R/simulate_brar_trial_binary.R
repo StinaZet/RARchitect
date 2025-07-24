@@ -58,7 +58,7 @@
   if (burnin > 0 && burnin <= N) { # Ensure burnin makes sense for N
     burnin_indices = 1:burnin
     selected_arm[burnin_indices] = blockrand::blockrand(burnin, arms, block.sizes = 1, levels = seq(1, arms, by = 1))$treatment
-    rewards[burnin_indices] = rbinom(burnin, 1, modelpar[selected_arm[burnin_indices]])
+    rewards[burnin_indices] = stats::rbinom(burnin, 1, modelpar[selected_arm[burnin_indices]])
     batch_number[burnin_indices] = 1
 
     # Store the allocation probabilities for the current block (equal for burn-in)
@@ -163,7 +163,7 @@
     }
 
     # --- Simulate Rewards ---
-    rewards[current_block_indices] = rbinom(
+    rewards[current_block_indices] = stats::rbinom(
       current_block_size, size = 1, prob = modelpar[selected_arm[current_block_indices]]
     )
 

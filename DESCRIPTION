@@ -1,12 +1,26 @@
 Package: RARchitect
-Title: What the Package Does (One Line, Title Case)
+Title: Simulating and Evaluating Trials with Response-Adaptive Randomization
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    c(person("Stina", "Zetterstrom", ,"stina.zetterstrom@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-0730-9425")),
+    person("Sofía", "Villar", , role = c("aut")),
+    person("Stef", "Baas", , role = c("aut")),
+    person("Lukas", "Pin", , role = c("aut")),
+    person("David", "Robertson", , role = c("aut")),
+    person("Nina", "Deliu", , role = c("aut")))
+Description: A framework for simulating Response-Adaptive Randomization (RAR) 
+  clinical trial designs for different types of outcomes. Its purpose is to 
+  assist researchers and statisticians in designing RAR trials by allowing them 
+  to test various configurations and parameters, such as prior settings, 
+  allocation tuning and clipping strategies, and recruitment rates, through simulations.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Imports: 
+    blockrand,
+    stats
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

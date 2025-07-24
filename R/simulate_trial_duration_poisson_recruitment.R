@@ -3,12 +3,11 @@
 #' Simulates the total duration of a clinical trial multiple times, accounting for
 #' patient recruitment following a Poisson process (meaning inter-arrival times
 #' are exponentially distributed) and a fixed time for outcome observation.
-#' Recruitment occurs in sequential batches (blocks) of potentially different sizes,
-#' and a new batch can only begin enrollment after all participants from the
-#' previous batch have been fully enrolled and their outcomes observed.
+#' Recruitment occurs in sequential blocks of potentially different sizes,
+#' and a new block can only begin enrollment after all participants from the
+#' previous block have been fully enrolled and their outcomes observed.
 #' This function returns the estimated (average) recruitment and observation times
-#' for each participant across all simulations, along with their standard deviations,
-#' providing insight into the variability of these time points.
+#' for each participant across all simulations, along with their standard deviations.
 #'
 #' @param N Numeric. Total sample size for the trial. Must be equal to `sum(block_sizes)`.
 #' @param block_sizes Numeric vector. A vector where each element specifies the
@@ -146,7 +145,7 @@ simulate_trial_duration_poisson_recruitment <- function(N,
       end_index <- patients_processed_so_far + current_batch_size
 
       # Simulate inter-arrival times for patients within this batch
-      inter_arrival_times_in_batch <- rexp(current_batch_size,
+      inter_arrival_times_in_batch <- stats::rexp(current_batch_size,
                                            rate = poisson_recruitment_rate_per_unit_time)
 
       # Calculate cumulative recruitment times within this batch relative to its start
@@ -186,8 +185,8 @@ simulate_trial_duration_poisson_recruitment <- function(N,
 
   # Calculate standard deviations. Handle num_simulations = 1 gracefully (sd will be 0).
   if (num_simulations > 1) {
-    std_dev_recruitment_times <- apply(all_recruitment_times, 1, sd)
-    std_dev_observation_times <- apply(all_observation_times, 1, sd)
+    std_dev_recruitment_times <- apply(all_recruitment_times, 1, stats::sd)
+    std_dev_observation_times <- apply(all_observation_times, 1, stats::sd)
   } else {
     std_dev_recruitment_times <- rep(0, N)
     std_dev_observation_times <- rep(0, N)
