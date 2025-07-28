@@ -18,7 +18,7 @@ posterior_bin_sim = function(M = 10000, alphas, betas)
 
 # Calculate the Exact Posterior Probability of Superiority
 # Implements the closed-form Bayesian solution to calculate the probability
-# that Treatment 1 is superior to Treatment 2 for binary outcomes.
+# that Treatment 2 is superior to Treatment 1 for binary outcomes.
 posterior_bin_exact = function(alphas, betas)
 {
   alpha_1 = alphas[1]
@@ -27,14 +27,14 @@ posterior_bin_exact = function(alphas, betas)
   beta_2 = betas[2]
 
   # This is the closed-form solution for P(T1 > T2)
-  total_prob_T1_best = 0
+  total_prob_T2_best = 0
   for (i in 0:(alpha_2 - 1)) {
-    total_prob_T1_best = total_prob_T1_best +
+    total_prob_T2_best = total_prob_T2_best +
       exp(lbeta(alpha_1 + i, beta_1 + beta_2) - log(beta_2 + i) - lbeta(1 + i, beta_2) - lbeta(alpha_1, beta_1))
   }
 
-  prob_T1_is_best = total_prob_T1_best
-  prob_T2_is_best = 1 - total_prob_T1_best
+  prob_T1_is_best = 1 - total_prob_T2_best
+  prob_T2_is_best = total_prob_T2_best
 
   return(c(prob_T1_is_best,prob_T2_is_best))
 }
