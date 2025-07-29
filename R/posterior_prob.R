@@ -11,7 +11,7 @@ posterior_bin_sim = function(M = 10000, alphas, betas)
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = sum(arm1 > arm2) / M
+  ap_arm1 = sum(arm1 > arm2) / M  ## Question Stef: Why not use mean()?
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }
@@ -27,7 +27,7 @@ posterior_bin_exact = function(alphas, betas)
   beta_2 = betas[2]
 
   # This is the closed-form solution for P(T1 > T2)
-  total_prob_T2_best = 0
+  total_prob_T2_best = 0           ## Question Stef: should we call it ap_arm_2 (or even switch to arm 1) to have agreement with posterior_bin_sim? 
   for (i in 0:(alpha_2 - 1)) {
     total_prob_T2_best = total_prob_T2_best +
       exp(lbeta(alpha_1 + i, beta_1 + beta_2) - log(beta_2 + i) - lbeta(1 + i, beta_2) - lbeta(alpha_1, beta_1))
@@ -52,7 +52,7 @@ posterior_norm_sim = function(M = 10000, means, sds)
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = sum(arm1 > arm2) / M
+  ap_arm1 = sum(arm1 > arm2) / M ## Remark Stef: you can also calculate this exactly, just use pnorm
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }
