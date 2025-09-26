@@ -136,9 +136,9 @@
       current_clipping_value <- max(current_clipping_value, 1e-6)
     }
 
-    if (current_clipping_valu > 0) {
-      lower_bound_per_arm = current_clipping_valu
-      upper_bound_per_arm = 1 - (arms - 1) * current_clipping_valu
+    if (current_clipping_value > 0) {
+      lower_bound_per_arm = current_clipping_value
+      upper_bound_per_arm = 1 - (arms - 1) * current_clipping_value
 
       alloc_probs_temp = pmax(alloc_probs_tuned, lower_bound_per_arm)
       alloc_probs_temp = pmin(alloc_probs_temp, upper_bound_per_arm)
@@ -153,10 +153,12 @@
       alloc_probs_final = alloc_probs_tuned
     }
 
+    alloc_probs_final = round(alloc_probs_final, digits = 10)
+
     # Store the allocation probabilities for the current block
     allocation_probs_matrix[current_block_indices, ] = matrix(
       rep(alloc_probs_final, each = current_block_size),
-      ncol = arms, byrow = TRUE
+      ncol = arms, byrow = FALSE
     )
 
     # Sample arms for the current block

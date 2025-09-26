@@ -187,9 +187,11 @@
       alloc_probs_final <- alloc_probs_tuned
     }
 
+    alloc_probs_final = round(alloc_probs_final, digits = 10)
+
     allocation_probs_matrix[current_block_indices, ] <- matrix(
       rep(alloc_probs_final, each = current_block_size),
-      ncol = arms, byrow = TRUE
+      ncol = arms, byrow = FALSE
     )
 
     selected_arm[current_block_indices] <- sample(
