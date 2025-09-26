@@ -1,7 +1,6 @@
 # Monte Carlo Estimate of Thompson Sampling/BRAR Arm 1 Allocation Probability
 # This helper function estimates the probability of selecting Arm 1 under TS
 # for a two-arm binary outcome case using Monte Carlo simulations.
-
 posterior_bin_sim = function(M = 10000, alphas, betas)
 {
   # Simulate M samples from the posterior Beta distribution for Arm 1
@@ -11,7 +10,7 @@ posterior_bin_sim = function(M = 10000, alphas, betas)
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = sum(arm1 > arm2) / M  ## Question Stef: Why not use mean()?
+  ap_arm1 = mean(arm1 > arm2)
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }
@@ -27,16 +26,17 @@ posterior_bin_exact = function(alphas, betas)
   beta_2 = betas[2]
 
   # This is the closed-form solution for P(T1 > T2)
-  total_prob_T2_best = 0           ## Question Stef: should we call it ap_arm_2 (or even switch to arm 1) to have agreement with posterior_bin_sim? 
-  for (i in 0:(alpha_2 - 1)) {
-    total_prob_T2_best = total_prob_T2_best +
-      exp(lbeta(alpha_1 + i, beta_1 + beta_2) - log(beta_2 + i) - lbeta(1 + i, beta_2) - lbeta(alpha_1, beta_1))
+  ap_arm2 = 0           ## Question Stef: should we call it ap_arm_2 (or even switch to arm 1) to have agreement with posterior_bin_sim?
+  for (iii in 0:(alpha_2 - 1))
+  {
+    ap_arm2 = ap_arm2 +
+      exp(lbeta(alpha_1 + iii, beta_1 + beta_2) - log(beta_2 + iii) - lbeta(1 + iii, beta_2) - lbeta(alpha_1, beta_1))
   }
 
-  prob_T1_is_best = 1 - total_prob_T2_best
-  prob_T2_is_best = total_prob_T2_best
+  ap_arm1 = 1 - ap_arm2
+  ap_arm2 = ap_arm2
 
-  return(c(prob_T1_is_best,prob_T2_is_best))
+  return(c(ap_arm1, ap_arm2))
 }
 
 
@@ -52,7 +52,19 @@ posterior_norm_sim = function(M = 10000, means, sds)
 
   # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
   # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = sum(arm1 > arm2) / M ## Remark Stef: you can also calculate this exactly, just use pnorm
+  ap_arm1 = mean(arm1 > arm2) ## Remark Stef: you can also calculate this exactly, just use pnorm
+  ap_arm2 = 1 - ap_arm1
+  return(c(ap_arm1, ap_arm2))
+}
+
+
+# Helper function to estimate Thompson Sampling allocation probabilities for Normal outcomes
+# with known population variance (Normal-Normal conjugate model).
+# This function calculates allocation probabilities exactly.
+posterior_norm_exact = function(means, sds)
+{
+  # Calculate the posterior probability that arm 1 is better than arm 2.
+  ap_arm1 = pnorm(((means[1] - means[2]) / sqrt(sds[1]^2 + sds[2]^2)))
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }
