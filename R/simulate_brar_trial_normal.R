@@ -72,18 +72,43 @@
   current_range_end <- 0
 
   # --- Simulation for burn-in period ---
+  # Initialize vectors/matrix to store results for all N participants
+  rewards = numeric(N)           # continuous outcomes now
+  selected_arm = numeric(N)
+  batch_number = numeric(N)
+  allocation_probs_matrix = matrix(NA, nrow = N, ncol = arms)
+  colnames(allocation_probs_matrix) = paste0("AlloProb_Arm", 1:arms)
+
+  # --- Simulation for burn-in ---
   if (burnin > 0 && burnin <= N) {
-    burnin_indices <- 1:burnin
-    batch_number[burnin_indices] <- 1
+    burnin_indices = 1:burnin
 
-    selected_arm[burnin_indices] <- blockrand::blockrand(burnin, arms, block.sizes = 1, levels = seq(1, arms, by = 1))$treatment
+    # Generate roughly balanced allocation
+    full_cycles = floor(burnin / arms)       # number of full cycles
+    remainder = burnin %% arms               # leftover participants
 
+    # Repeat each arm for full cycles
+    arm_assignments = rep(1:arms, times = full_cycles)
+
+    # Add remaining participants randomly among the arms
+    if (remainder > 0) {
+      arm_assignments = c(arm_assignments, sample(1:arms, remainder))
+    }
+
+    # Shuffle to avoid ordering bias
+    selected_arm[burnin_indices] = sample(arm_assignments, burnin)
+
+    # Simulate outcomes for burn-in participants
     outcomes[burnin_indices] <- stats::rnorm(burnin,
-                                      mean = true_means[selected_arm[burnin_indices]],
-                                      sd = true_sds[selected_arm[burnin_indices]])
+                                             mean = true_means[selected_arm[burnin_indices]],
+                                             sd = true_sds[selected_arm[burnin_indices]])
 
-    allocation_probs_matrix[burnin_indices, ] <- matrix(
-      rep(1 / arms, each = burnin),
+
+    batch_number[burnin_indices] = 1
+
+    # Store allocation probabilities (equal for burn-in)
+    allocation_probs_matrix[burnin_indices, ] = matrix(
+      rep(1/arms, each = burnin),
       ncol = arms, byrow = TRUE
     )
 

@@ -55,17 +55,34 @@
   colnames(allocation_probs_matrix) = paste0("AlloProb_Arm", 1:arms)
 
   # --- Simulation for burn-in ---
-  if (burnin > 0 && burnin <= N) { # Ensure burnin makes sense for N
+  if (burnin > 0 && burnin <= N) {
     burnin_indices = 1:burnin
-    selected_arm[burnin_indices] = blockrand::blockrand(burnin, arms, block.sizes = 1, levels = seq(1, arms, by = 1))$treatment
+
+    # Generate roughly balanced allocation
+    full_cycles = floor(burnin / arms) # Number of full cycles
+    remainder = burnin %% arms # Leftover participants
+
+    # Repeat each arm for full cycles
+    arm_assignments = rep(1:arms, times = full_cycles)
+
+    # Add remaining participants randomly among the arms
+    if (remainder > 0) {
+      arm_assignments = c(arm_assignments, sample(1:arms, remainder))
+    }
+
+    # Shuffle to avoid any ordering bias
+    selected_arm[burnin_indices] = sample(arm_assignments, burnin)
+
+    # Simulate rewards for burn-in participants
     rewards[burnin_indices] = stats::rbinom(burnin, 1, modelpar[selected_arm[burnin_indices]])
     batch_number[burnin_indices] = 1
 
-    # Store the allocation probabilities for the current block (equal for burn-in)
+    # Store the allocation probabilities for burn-in (equal)
     allocation_probs_matrix[burnin_indices, ] = matrix(
       rep(1/arms, each = burnin),
       ncol = arms, byrow = TRUE
     )
+  }
 
     # Initialize Beta distribution parameters (alpha and beta) for each arm
     current_alpha_params = priors[1, ]
