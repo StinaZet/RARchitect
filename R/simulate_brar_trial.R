@@ -57,7 +57,6 @@
 #' It is **required** that `clipping * arms <= 1` for consistent bounds.
 #' \item If `clipping = "adaptive"` (Character), adaptive clipping is applied as
 #' `rho_min,t = 1/arms * (batch_number)^(-0.7)` (as in Hadad et al., 2021).
-#' This option is only available when `outcome_type = "normal"`.
 #' }
 #' @param burnin Numeric. The number of initial participants allocated
 #' before standard block processing begins. These participants are treated
@@ -188,9 +187,6 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     }
     if (postprobmethod == "simulation") {
       warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
-    }
-    if (is.character(clipping) && clipping == "adaptive") {
-      stop("Adaptive clipping ('clipping = \"adaptive\"') is only supported for 'normal' outcome_type.")
     }
 
     results <- .simulate_brar_trial_binary(

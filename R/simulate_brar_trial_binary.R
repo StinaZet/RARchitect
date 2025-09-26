@@ -126,9 +126,19 @@
     }
 
     # --- Apply clipping ---
-    if (clipping > 0) {
-      lower_bound_per_arm = clipping
-      upper_bound_per_arm = 1 - (arms - 1) * clipping
+    current_clipping_value <- 0
+    if (is.numeric(clipping) && clipping > 0) {
+      current_clipping_value <- clipping
+    } else if (is.character(clipping) && clipping == "adaptive") {
+      adaptive_batch_num <- i
+      current_clipping_value <- (1 / arms) * (adaptive_batch_num)^(-0.7)
+      current_clipping_value <- min(current_clipping_value, 1/arms)
+      current_clipping_value <- max(current_clipping_value, 1e-6)
+    }
+
+    if (current_clipping_valu > 0) {
+      lower_bound_per_arm = current_clipping_valu
+      upper_bound_per_arm = 1 - (arms - 1) * current_clipping_valu
 
       alloc_probs_temp = pmax(alloc_probs_tuned, lower_bound_per_arm)
       alloc_probs_temp = pmin(alloc_probs_temp, upper_bound_per_arm)
