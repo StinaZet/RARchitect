@@ -13,6 +13,7 @@
   tuning = 1,
   clipping = 0,
   burnin = 0,
+  postprobmethod,
   ensure_all_arms_sampled = FALSE
 )
 }
