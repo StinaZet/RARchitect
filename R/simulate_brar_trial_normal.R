@@ -128,11 +128,23 @@
 
     current_posterior_sds_of_mean <- sqrt(current_posterior_tau2_params)
 
-    # Assumes posterior_norm_sim is available elsewhere in package
-    alloc_probs_raw <- posterior_norm_sim(
-      means = current_posterior_mu_params,
-      sds = current_posterior_sds_of_mean
-    )
+
+    # Calculate the raw allocation probabilities for each arm
+    # Assumes posterior_bin_sim and posterior_bin_exact are available elsewhere in package
+    if(postprobmethod == "simulation") {
+      alloc_probs_raw = posterior_norm_sim(
+        means = current_posterior_mu_params,
+        sds = current_posterior_sds_of_mean
+      )
+    } else if(postprobmethod == "exact") {
+      alloc_probs_raw = posterior_norm_exact(
+        means = current_posterior_mu_params,
+        sds = current_posterior_sds_of_mean
+      )
+    } else {
+      # This case should be caught by main function validation
+      stop("Internal Error: Invalid postprobmethod.")
+    }
 
     # --- Apply tuning parameter (c) ---
     if (tuning == 0) {

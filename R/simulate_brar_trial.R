@@ -48,7 +48,7 @@
 #' \item A common value is 0.5. Defaults to 1.
 #' }
 #' @param clipping Character or Numeric. Forces a minimum and maximum probability
-#' of selecting each arm.
+#' of selecting each arm. Defaults to 0.
 #' \itemize{
 #' \item If `clipping = 0` (Numeric), no clipping is applied.
 #' \item If `clipping > 0` (Numeric), each arm's allocation probability is forced
@@ -66,7 +66,7 @@
 #' one participant is allocated to each arm within each block (if `blocksize >= arms`).
 #' This is useful for ensuring initial exploration. Defaults to FALSE.
 #' @param postprobmethod Character. (Applicable only when `outcome_type = "binary"`).
-#' Method for calculating posterior probabilities. Can be `"simulation"` or `"exact"`. Defaults to "simulation".
+#' Method for calculating posterior probabilities. Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.
 #' @param recruitment_rate Numeric. The rate parameter (lambda)
 #' for the Poisson process that governs patient recruitment for trial duration simulation.
 #' This is the average number of patients arriving per unit of time (e.g., patients per month).
@@ -102,7 +102,7 @@
 #' head(results_binary)
 #' print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
 #'
-#' # Example 2: Simulate a Normal Outcome Trial with adaptive clipping
+#' # Example 2: Simulate a Normal Outcome Trial
 #' set.seed(102)
 #' model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
 #' prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
@@ -112,7 +112,8 @@
 #' arms = 2, N = 200, blocksize = 10,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
-#' tuning = 0.5, clipping = "adaptive", burnin = 10, ensure_all_arms_sampled = TRUE,
+#' tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
+#' #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 10,
 #' observation_delay = 15
 #' )
@@ -185,6 +186,9 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     if (!(postprobmethod %in% c("simulation", "exact"))) {
       stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
     }
+    if (postprobmethod == "simulation") {
+      warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
+    }
     if (is.character(clipping) && clipping == "adaptive") {
       stop("Adaptive clipping ('clipping = \"adaptive\"') is only supported for 'normal' outcome_type.")
     }
@@ -197,15 +201,23 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
       postprobmethod = postprobmethod
     )
   } else if (outcome_type == "normal") {
-    if ((postprobmethod!="simulation")) {
-      stop("Parameter 'postprobmethod' is must be set to 'simulation' for 'normal' outcome_type.")
+
+    if (is.null(postprobmethod)) {
+      stop("For 'normal' outcome_type, 'postprobmethod' must be specified ('simulation' or 'exact').")
+    }
+    if (!(postprobmethod %in% c("simulation", "exact"))) {
+      stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
+    }
+    if (postprobmethod == "simulation") {
+      warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     }
 
     results <- .simulate_brar_trial_normal(
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      ensure_all_arms_sampled = ensure_all_arms_sampled
+      ensure_all_arms_sampled = ensure_all_arms_sampled,
+      postprobmethod = postprobmethod
     )
   } else {
     # This block should ideally not be reached due to match.arg, but as a safeguard.
