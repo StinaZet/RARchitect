@@ -15,10 +15,9 @@
 #' @param burnin Numeric. Number of initial participants for burn-in.
 #' @param ensure_all_arms_sampled Logical. If TRUE, ensures at least one arm is sampled per block.
 #' @keywords internal
-.simulate_brar_trial_normal <- function(arms = 2, N, blocksize,
-                                        priors,
-                                        modelpar, tuning = 1, clipping = 0, burnin = 0,
-                                        ensure_all_arms_sampled = FALSE)
+.simulate_brar_trial_normal <- function(arms = 2, N, blocksize, priors, modelpar,
+                                        tuning = 1, clipping = 0, burnin = 0,
+                                        postprobmethod, ensure_all_arms_sampled = FALSE)
 {
   # --- Input Validation and Setup ---
   # Only specific validation relevant to this internal function.

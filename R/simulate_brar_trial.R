@@ -94,7 +94,7 @@
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
-#' postprobmethod = "simulation", # Or "exact"
+#' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 5,
 #' observation_delay = 30)
 #' head(results_binary)
@@ -182,9 +182,9 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     if (!(postprobmethod %in% c("simulation", "exact"))) {
       stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
     }
-    if (postprobmethod == "simulation") {
-      warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
-    }
+    #if (postprobmethod == "simulation") {
+    #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
+    #}
 
     results <- .simulate_brar_trial_binary(
       arms = arms, N = N, blocksize = blocksize,
@@ -201,9 +201,9 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     if (!(postprobmethod %in% c("simulation", "exact"))) {
       stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
     }
-    if (postprobmethod == "simulation") {
-      warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
-    }
+    #if (postprobmethod == "simulation") {
+    #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
+    #}
 
     results <- .simulate_brar_trial_normal(
       arms = arms, N = N, blocksize = blocksize,
