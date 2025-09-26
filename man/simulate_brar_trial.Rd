@@ -73,7 +73,7 @@ towards equal randomization.
 }}
 
 \item{clipping}{Character or Numeric. Forces a minimum and maximum probability
-of selecting each arm.
+of selecting each arm. Defaults to 0.
 \itemize{
 \item If \code{clipping = 0} (Numeric), no clipping is applied.
 \item If \code{clipping > 0} (Numeric), each arm's allocation probability is forced
@@ -82,7 +82,6 @@ Probabilities are then re-normalized to sum to 1.
 It is \strong{required} that \code{clipping * arms <= 1} for consistent bounds.
 \item If \code{clipping = "adaptive"} (Character), adaptive clipping is applied as
 \verb{rho_min,t = 1/arms * (batch_number)^(-0.7)} (as in Hadad et al., 2021).
-This option is only available when \code{outcome_type = "normal"}.
 }}
 
 \item{burnin}{Numeric. The number of initial participants allocated
@@ -94,7 +93,7 @@ one participant is allocated to each arm within each block (if \code{blocksize >
 This is useful for ensuring initial exploration. Defaults to FALSE.}
 
 \item{postprobmethod}{Character. (Applicable only when \code{outcome_type = "binary"}).
-Method for calculating posterior probabilities. Can be \code{"simulation"} or \code{"exact"}. Defaults to "simulation".}
+Method for calculating posterior probabilities. Can be \code{"simulation"} or \code{"exact"}. Defaults to \code{"simulation"}.}
 
 \item{recruitment_rate}{Numeric. The rate parameter (lambda)
 for the Poisson process that governs patient recruitment for trial duration simulation.
@@ -134,12 +133,11 @@ priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
 postprobmethod = "simulation", # Or "exact"
 recruitment_rate = 5,
-observation_delay = 30
-)
+observation_delay = 30)
 head(results_binary)
 print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
 
-# Example 2: Simulate a Normal Outcome Trial with adaptive clipping
+# Example 2: Simulate a Normal Outcome Trial
 set.seed(102)
 model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
 prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
@@ -149,10 +147,10 @@ outcome_type = "normal",
 arms = 2, N = 200, blocksize = 10,
 priors = prior_params_norm,
 modelpar = model_params_norm,
-tuning = 0.5, clipping = "adaptive", burnin = 10, ensure_all_arms_sampled = TRUE,
+tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
+postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 10,
-observation_delay = 15
-)
+observation_delay = 15)
 head(results_normal)
 print(paste("Observed mean Arm 1:", mean(results_normal$Outcome[results_normal$Arm == 1])))
 
@@ -169,8 +167,7 @@ burnin = 0,
 ensure_all_arms_sampled = TRUE,
 postprobmethod = "exact",
 recruitment_rate = 8,
-observation_delay = 20
-)
+observation_delay = 20)
 tail(results_binary_tuned)
 
 }

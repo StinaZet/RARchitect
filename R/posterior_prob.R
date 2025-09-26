@@ -64,7 +64,7 @@ posterior_norm_sim = function(M = 10000, means, sds)
 posterior_norm_exact = function(means, sds)
 {
   # Calculate the posterior probability that arm 1 is better than arm 2.
-  ap_arm1 = pnorm(((means[1] - means[2]) / sqrt(sds[1]^2 + sds[2]^2)))
+  ap_arm1 = stats::pnorm(((means[1] - means[2]) / sqrt(sds[1]^2 + sds[2]^2)))
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }

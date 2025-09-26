@@ -96,8 +96,7 @@
 #' tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
 #' postprobmethod = "simulation", # Or "exact"
 #' recruitment_rate = 5,
-#' observation_delay = 30
-#' )
+#' observation_delay = 30)
 #' head(results_binary)
 #' print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
 #'
@@ -112,10 +111,9 @@
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
 #' tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
-#' #' postprobmethod = "exact", # Or "simulation"
+#' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 10,
-#' observation_delay = 15
-#' )
+#' observation_delay = 15)
 #' head(results_normal)
 #' print(paste("Observed mean Arm 1:", mean(results_normal$Outcome[results_normal$Arm == 1])))
 #'
@@ -132,8 +130,7 @@
 #' ensure_all_arms_sampled = TRUE,
 #' postprobmethod = "exact",
 #' recruitment_rate = 8,
-#' observation_delay = 20
-#' )
+#' observation_delay = 20)
 #' tail(results_binary_tuned)
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "normal"),

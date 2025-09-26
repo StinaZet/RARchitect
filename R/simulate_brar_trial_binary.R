@@ -82,8 +82,6 @@
       rep(1/arms, each = burnin),
       ncol = arms, byrow = TRUE
     )
-  }
-
     # Initialize Beta distribution parameters (alpha and beta) for each arm
     current_alpha_params = priors[1, ]
     current_beta_params = priors[2, ]
