@@ -8,7 +8,7 @@
 #' duration based on a Poisson recruitment process.
 #'
 #' @param outcome_type Character. Specifies the type of outcome to simulate.
-#' Must be either `"binary"` or `"normal"`.
+#' Must be either `"binary"`, `"normal"`, or `"exponential"`.
 #' @param arms Numeric. Number of arms in the trial.
 #' @param N Numeric. Total sample size for the trial.
 #' @param blocksize Numeric. (Fixed) size of each block of participants for the adaptive randomization.
@@ -37,6 +37,9 @@
 #' 4. beta: prior scale for the variance.
 #' Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
 #' `matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)`
+#' \item If `outcome_type = "exponential"`: A 2-row matrix where the first row contains the shape
+#' parameters and the second row contains the rate parameters for the Gamma
+#' distributions of each arm. The number of columns must match `arms`.
 #' }
 #' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
 #' data generating process. The structure depends on `outcome_type`:
@@ -49,6 +52,8 @@
 #' 2. True standard deviation for the arm. It is assumed to be
 #' the known population standard deviation for the purpose of posterior updates.
 #' Example for two arms: `matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)`
+#' \item If `outcome_type = "exponential"`: A numeric vector with the rates for
+#' each exponential arm. e.g., `c(0.2, 0.1)`.
 #' }
 #' @param tuning Numeric. A parameter (referred to as 'c' or 'gamma' in the
 #' Wathen and Thall, 2017 paper) that shrinks allocation probabilities
@@ -109,7 +114,6 @@
 #' recruitment_rate = 5,
 #' observation_delay = 30)
 #' head(results_binary)
-#' print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
 #'
 #' # Example 2: Simulate a Normal Outcome Trial
 #' set.seed(102)
@@ -126,23 +130,61 @@
 #' recruitment_rate = 10,
 #' observation_delay = 15)
 #' head(results_normal)
-#' print(paste("Observed mean Arm 1:", mean(results_normal$Outcome[results_normal$Arm == 1])))
 #'
-#' # Example 3: Binary trial with tuning and clipping
+#' # Example 3: Binary trial with tuning and clipping and uneven sample size
 #' set.seed(103)
 #' results_binary_tuned <- simulate_brar_trial(
 #' outcome_type = "binary",
-#' arms = 2, N = 150, blocksize = 15,
+#' arms = 2, N = 149, burnin =15, blocksize = 15,
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' modelpar = c(0.7, 0.5),
 #' tuning = 0.5,
 #' clipping = 0.05,
-#' burnin = 0,
 #' ensure_all_arms_sampled = TRUE,
 #' postprobmethod = "exact",
 #' recruitment_rate = 8,
 #' observation_delay = 20)
 #' tail(results_binary_tuned)
+#'
+#' # Example 4: Simulate a Normal Outcome Trial (unknown variance)
+#' set.seed(104)
+#' model_unvar <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+#' # priors: mu0=0, kappa=0.1, alpha=1, beta=1 for each arm
+#' prior_unvar <- matrix(c(0, 0,
+#'                         0.1, 0.1,
+#'                         1, 1,
+#'                         1, 1),
+#'                       nrow = 4, byrow = TRUE)
+#'
+#' results_normal_unvar <- simulate_brar_trial(
+#'   outcome_type = "normal",
+#'   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
+#'   priors = prior_unvar,
+#'   modelpar = model_unvar,
+#'   tuning = 1, clipping = 0, burnin = 10,
+#'   ensure_all_arms_sampled = FALSE,
+#'   postprobmethod = "simulation",
+#'   recruitment_rate = 12,
+#'   observation_delay = 10)
+#' head(results_normal_unvar)
+#'
+#' #' # Example 5: Simulate an Exponential Outcome Trial
+#' # True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
+#' set.seed(105)
+#' prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
+#' true_rates_exp <- c(0.2, 0.1)
+#'
+#' results_exponential <- simulate_brar_trial(
+#'   outcome_type = "exponential",
+#'   arms = 2, N = 120, blocksize = 12,
+#'   priors = prior_params_exp,
+#'   modelpar = true_rates_exp,
+#'   tuning = 1, clipping = 0, burnin = 0,
+#'   ensure_all_arms_sampled = FALSE,
+#'   postprobmethod = "simulation",
+#'   recruitment_rate = 6,
+#'   observation_delay = 5)
+#' head(results_exponential)
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
                                 arms = 2, N, blocksize, known_var = FALSE,
@@ -168,6 +210,15 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
   if (tuning < 0) {
     stop("The 'tuning' parameter must be non-negative.")
   }
+  if (is.numeric(clipping) && (clipping < 0 || clipping >= 1)) {
+    stop("The numeric 'clipping' parameter must be between 0 and 1 (exclusive of 1).")
+  }
+  if (is.character(clipping) && clipping != "adaptive") {
+    stop("The character 'clipping' parameter must be 'adaptive'.")
+  }
+  if (is.numeric(clipping) && clipping > 0 && (clipping * arms) > 1) {
+    stop("Invalid numeric 'clipping' value: clipping * arms must be <= 1 to allow for consistent bounds across all arms and sum of probabilities to be 1.")
+  }
   if (burnin < 0 || !is.numeric(burnin) || burnin %% 1 != 0) {
     stop("The 'burnin' parameter must be a non-negative integer.")
   }
@@ -182,17 +233,18 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     stop("Parameter 'recruitment_rate' must be a positive number for the trial duration simulation (as it represents a Poisson rate).")
   }
   if (observation_delay < 0 || !is.numeric(observation_delay)) {
-    stop("Parameter 'observation_delay' cannot be negative.")
+    stop("Parameter 'observation_delay' must be a positive number for the trial duration simulation.")
+  }
+
+  if (is.null(postprobmethod)) {
+    stop("'postprobmethod' must be specified ('simulation' or 'exact').")
+  }
+  if (!(postprobmethod %in% c("simulation", "exact"))) {
+    stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
   }
 
   # Delegate to specific simulation functions based on outcome_type
   if (outcome_type == "binary") {
-    if (is.null(postprobmethod)) {
-      stop("For 'binary' outcome_type, 'postprobmethod' must be specified ('simulation' or 'exact').")
-    }
-    if (!(postprobmethod %in% c("simulation", "exact"))) {
-      stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
-    }
     if (known_var == TRUE) {
       warning("You have chosen the variance to be known, this option is only available for normal outcome.")
     }
@@ -209,12 +261,6 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     )
   } else if (outcome_type == "normal") {
 
-    if (is.null(postprobmethod)) {
-      stop("For 'normal' outcome_type, 'postprobmethod' must be specified ('simulation' or 'exact').")
-    }
-    if (!(postprobmethod %in% c("simulation", "exact"))) {
-      stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
-    }
     #if (postprobmethod == "simulation") {
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     #}
@@ -226,9 +272,22 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
       ensure_all_arms_sampled = ensure_all_arms_sampled,
       postprobmethod = postprobmethod
     )
+  } else if (outcome_type == "exponential") {
+
+    #if (postprobmethod == "simulation") {
+    #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
+    #}
+
+    results <- .simulate_brar_trial_exp(
+      arms = arms, N = N, blocksize = blocksize,
+      priors = priors, modelpar = modelpar, tuning = tuning,
+      clipping = clipping, burnin = burnin,
+      ensure_all_arms_sampled = ensure_all_arms_sampled,
+      postprobmethod = postprobmethod
+    )
   } else {
     # This block should ideally not be reached due to match.arg, but as a safeguard.
-    stop("Invalid 'outcome_type'. Must be 'binary' or 'normal'.")
+    stop("Invalid 'outcome_type'. Must be 'binary', 'normal' or 'exponential'.")
   }
 
   # --- Call simulate_trial_duration_poisson_recruitment ---
@@ -239,9 +298,9 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     stop("Burn-in period ('burnin') cannot be greater than total sample size ('N').")
   }
 
-  if (remaining_N > 0 && remaining_N %% blocksize != 0) {
-    stop("The number of participants after the burn-in period (N - burnin) must be a multiple of 'blocksize' for consistent trial duration simulation. Please adjust N, burnin, or blocksize.")
-  }
+  #if (remaining_N > 0 && remaining_N %% blocksize != 0) {
+  #  stop("The number of participants after the burn-in period (N - burnin) must be a multiple of 'blocksize' for consistent trial duration simulation. Please adjust N, burnin, or blocksize.")
+  #}
 
   if (N > 0) { # Only run duration simulation if N is positive
     num_main_blocks <- remaining_N / blocksize

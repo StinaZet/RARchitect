@@ -1,24 +1,24 @@
 #' Simulate a Binary Response Adaptive Randomization (BRAR) Trial (Internal)
 #'
 #' This is an internal helper function for `simulate_brar_trial`. It simulates a
-#' multi-arm clinical trial using Thompson Sampling with a Beta-Bernoulli model
-#' for binary outcomes.
+#' multi-arm clinical trial using Thompson Sampling with a exponential-gamma model
+#' for time-to-event outcomes.
 #'
 #' @param arms Numeric. Number of arms in the trial.
 #' @param N Numeric. Total sample size for the trial.
 #' @param blocksize Numeric. (Fixed) size of each block of participants.
-#' @param priors Matrix. A 2-row matrix where the first row contains alpha parameters
-#'   and the second row contains beta parameters for the Beta distributions of each arm.
-#' @param modelpar Numeric vector. True success probabilities for each Bernoulli arm.
+#' @param priors Matrix. A 2-row matrix where the first row contains XXX parameters
+#'   and the second row contains XXX parameters for the Gamma distributions of each arm.
+#' @param modelpar Numeric vector. True model parameters for each exponential arm.
 #' @param tuning Numeric. Tuning parameter for allocation probabilities.
 #' @param clipping Numeric. Clipping parameter for allocation probabilities.
 #' @param burnin Numeric. Number of initial participants for burn-in.
 #' @param ensure_all_arms_sampled Logical. If TRUE, ensures at least one arm is sampled per block.
 #' @param postprobmethod Character. Method for calculating posterior probabilities ("simulation" or "exact").
 #' @keywords internal
-.simulate_brar_trial_binary = function(arms = 2, N, blocksize, priors, modelpar,
-                                       tuning = 1, clipping = 0, burnin = 0,
-                                       postprobmethod, ensure_all_arms_sampled = FALSE)
+.simulate_brar_trial_exp = function(arms = 2, N, blocksize, priors, modelpar,
+                                    tuning = 1, clipping = 0, burnin = 0,
+                                    postprobmethod, ensure_all_arms_sampled = FALSE)
 {
   # --- Input Validation and Setup ---
   # Only specific validation relevant to this internal function.
@@ -29,8 +29,11 @@
   if (!is.matrix(priors) || nrow(priors) != 2 || ncol(priors) != arms) {
     stop("'priors' must be a 2-row matrix with 'arms' columns (first row: alpha, second row: beta).")
   }
-
-
+  if (postprobmethod=="exact" && priors%%1 != 0) {
+    stop("'priors' must be integer values when for exact computation of the posterior probabilities. Use postprobmethod == 'simulation' if you want to use non-integer values.")
+  }
+  
+  
   # Determine block sizes for each iteration, considering burn-in
   if (burnin > 0) {
     Nblocks = 1 + floor((N - burnin) / blocksize)
@@ -39,7 +42,7 @@
     Nblocks = floor(N / blocksize)
     block_sizes = rep(blocksize, Nblocks)
   }
-
+  
   # Initialize vectors/matrix to store results for all N participants
   rewards = numeric(N)
   selected_arm = numeric(N)
@@ -47,80 +50,80 @@
   # Matrix to store allocation probabilities for all arms
   allocation_probs_matrix = matrix(NA, nrow = N, ncol = arms)
   colnames(allocation_probs_matrix) = paste0("AlloProb_Arm", 1:arms)
-
+  
   # --- Simulation for burn-in ---
   if (burnin > 0 && burnin <= N) {
     burnin_idx = 1:burnin
-
+    
     # Generate roughly balanced allocation
     full_cycles = floor(burnin / arms) # Number of full cycles
     remainder = burnin %% arms # Leftover participants
-
+    
     # Repeat each arm for full cycles
     arm_assignments = rep(1:arms, times = full_cycles)
-
+    
     # Add remaining participants randomly among the arms
     if (remainder > 0) {
       arm_assignments = c(arm_assignments, sample(1:arms, remainder))
     }
-
+    
     # Shuffle to avoid any ordering bias
     selected_arm[burnin_idx] = sample(arm_assignments, burnin)
-
+    
     # Simulate rewards for burn-in participants
-    rewards[burnin_idx] = stats::rbinom(burnin, 1, modelpar[selected_arm[burnin_idx]])
+    rewards[burnin_idx] = stats::rexp(burnin, modelpar[selected_arm[burnin_idx]])
     batch_number[burnin_idx] = 1
-
+    
     # Store the allocation probabilities for burn-in (equal)
     allocation_probs_matrix[burnin_idx, ] = matrix(
       rep(1/arms, each = burnin),
       ncol = arms, byrow = TRUE
     )
     # Initialize Beta distribution parameters (alpha and beta) for each arm
-    current_alpha_params = priors[1, ]
-    current_beta_params = priors[2, ]
-
+    current_shape = priors[1, ]
+    current_rate = priors[2, ]
+    
     for(i in 1:arms) {
-      current_alpha_params[i] = current_alpha_params[i] + sum(rewards[selected_arm[burnin_idx] == i])
-      current_beta_params[i] = current_beta_params[i] + sum(selected_arm[burnin_idx] == i) - sum(rewards[selected_arm[burnin_idx] == i])
+      current_shape[i] = current_shape[i] + sum(selected_arm[burnin_idx] == i)
+      current_rate[i] = current_rate[i] + sum(rewards[selected_arm[burnin_idx] == i])
     }
-
+    
     current_range_end = burnin
   } else {
-    current_alpha_params = priors[1, ]
-    current_beta_params = priors[2, ]
+    current_shape = priors[1, ]
+    current_rate = priors[2, ]
     current_range_end = 0
   }
-
-
+  
+  
   # --- Main Simulation Loop (Block-wise) ---
   # Start from block 1 if no burn-in, otherwise from block 2
   start_block_idx <- ifelse(burnin > 0 && burnin <= N, 2, 1) # Ensure we don't start at block 2 if burnin = N
   if (N == 0) start_block_idx = 1 # No blocks if N is 0
-
+  
   for (i in start_block_idx:Nblocks) {
     current_block_size = block_sizes[i]
-
+    
     # Handle cases where remaining N is smaller than blocksize
     if (current_range_end + current_block_size > N) {
       current_block_size = N - current_range_end
       if (current_block_size <= 0) break # No more patients to enroll
     }
-
+    
     current_block_indices = (current_range_end + 1):(current_range_end + current_block_size)
     batch_number[current_block_indices] = i
-
+    
     # Calculate the raw allocation probabilities for each arm
     # Assumes posterior_bin_sim and posterior_bin_exact are available elsewhere in package
     if(postprobmethod == "simulation") {
-      alloc_probs_raw = posterior_bin_sim(alphas = current_alpha_params, betas = current_beta_params)
+      alloc_probs_raw = posterior_exp_sim(shapes = current_shape, rates = current_rate)
     } else if(postprobmethod == "exact") {
-      alloc_probs_raw = posterior_bin_exact(alphas = current_alpha_params, betas = current_beta_params)
+      alloc_probs_raw = posterior_exp_exact(shapes = current_shape, rates = current_rate)
     } else {
       # This case should be caught by main function validation
       stop("Internal Error: Invalid postprobmethod.")
     }
-
+    
     # --- Apply tuning parameter (c) from Wathen & Thall (2017) ---
     if (tuning == 0) {
       alloc_probs_tuned = rep(1 / arms, arms)
@@ -133,7 +136,7 @@
         alloc_probs_tuned = numerator_vec / denominator_sum
       }
     }
-
+    
     # --- Apply clipping ---
     current_clipping_value <- 0
     if (is.numeric(clipping) && clipping > 0) {
@@ -144,14 +147,14 @@
       current_clipping_value <- min(current_clipping_value, 1/arms)
       current_clipping_value <- max(current_clipping_value, 1e-6)
     }
-
+    
     if (current_clipping_value > 0) {
       lower_bound_per_arm = current_clipping_value
       upper_bound_per_arm = 1 - (arms - 1) * current_clipping_value
-
+      
       alloc_probs_temp = pmax(alloc_probs_tuned, lower_bound_per_arm)
       alloc_probs_temp = pmin(alloc_probs_temp, upper_bound_per_arm)
-
+      
       sum_temp_probs = sum(alloc_probs_temp)
       if (sum_temp_probs == 0) {
         alloc_probs_final = rep(1 / arms, arms)
@@ -161,20 +164,20 @@
     } else {
       alloc_probs_final = alloc_probs_tuned
     }
-
+    
     alloc_probs_final = round(alloc_probs_final, digits = 10)
-
+    
     # Store the allocation probabilities for the current block
     allocation_probs_matrix[current_block_indices, ] = matrix(
       rep(alloc_probs_final, each = current_block_size),
       ncol = arms, byrow = FALSE
     )
-
+    
     # Sample arms for the current block
     selected_arm[current_block_indices] = sample(
       1:arms, current_block_size, prob = alloc_probs_final, replace = TRUE
     )
-
+    
     # --- Ensure All Arms are Sampled (Exploration Guarantee) ---
     if (ensure_all_arms_sampled && length(unique(selected_arm[current_block_indices])) != arms && current_block_size >= arms) {
       missing_arms = setdiff(1:arms, unique(selected_arm[current_block_indices]))
@@ -182,27 +185,27 @@
         selected_arm[sample(current_block_indices, length(missing_arms), replace = FALSE)] = missing_arms
       }
     }
-
+    
     # --- Simulate Rewards ---
-    rewards[current_block_indices] = stats::rbinom(
-      current_block_size, size = 1, prob = modelpar[selected_arm[current_block_indices]]
+    rewards[current_block_indices] = stats::rexp(
+      current_block_size, rate = modelpar[selected_arm[current_block_indices]]
     )
-
+    
     # --- Update Beta Priors for the Next Block ---
     if (i < Nblocks) {
       for (k in 1:arms) {
         arm_k_indices_in_batch = current_block_indices[selected_arm[current_block_indices] == k]
         successes_arm_k = sum(rewards[arm_k_indices_in_batch])
         failures_arm_k = length(arm_k_indices_in_batch) - successes_arm_k
-
-        current_alpha_params[k] = current_alpha_params[k] + successes_arm_k
-        current_beta_params[k] = current_beta_params[k] + failures_arm_k
+        
+        current_shape[k] = current_shape[k] + successes_arm_k
+        current_rate[k] = current_rate[k] + failures_arm_k
       }
     }
-
+    
     current_range_end = current_range_end + current_block_size
   }
-
+  
   return(
     data.frame(
       Batch = batch_number,

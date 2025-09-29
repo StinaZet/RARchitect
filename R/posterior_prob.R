@@ -69,8 +69,6 @@ posterior_norm_exact = function(means, sds)
   return(c(ap_arm1, ap_arm2))
 }
 
-
-
 # Helper function to estimate Thompson Sampling allocation probabilities for Normal outcomes
 # with unknown population variance (Normal-Inverse-Gamma prior).
 # This function calculates allocation probabilities by performing Monte Carlo
@@ -93,5 +91,36 @@ posterior_norm_unknownvar_sim <- function(M = 10000, mu_n, kappa_n, alpha_n, bet
   # Compute allocation probabilities = frequency each arm is best
   ap = tabulate(winners, nbins = K) / M
   return(ap)
+}
+
+
+
+# Helper function to estimate Thompson Sampling allocation probabilities for
+# exponential outcomes. This function calculates allocation probabilities by
+# performing Monte Carlo simulations from the posterior distributions of the
+# means for each arm and determining which arm's sampled mean is the highest.
+posterior_exp_sim <- function(M = 10000, shapes, rates) {
+  arm1 <- rgamma(M, shape = shapes[1], rate = rates[1])
+  arm2 <- rgamma(M, shape = shapes[2], rate = rates[2])
+  ap_arm1 <- mean(arm1 > arm2)
+  ap_arm2 <- 1 - ap_arm1
+  return(c(ap_arm1, ap_arm2))
+}
+
+# Helper function to calculate Thompson Sampling allocation probabilities for
+# exponential outcomes with a Gamma prior. This function calculates allocation
+# probabilities exactly, but it only works for integer alpha and beta parameters.
+posterior_exp_exact <- function(shapes, rates) {
+  a1 <- shapes[1]; b1 <- rates[1]
+  a2 <- shapes[2]; b2 <- rates[2]
+  prob <- 0
+  for (k in 0:(a1-1)) {
+    prob <- prob + choose(a2 + k - 1, k) *
+      (b1 / (b1 + b2))^k *
+      (b2 / (b1 + b2))^a2
+  }
+  ap_arm1 <- prob
+  ap_arm2 <- 1 - prob
+  return(c(ap_arm1, ap_arm2))
 }
 

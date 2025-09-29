@@ -35,15 +35,7 @@
       stop("'priors' must be a 4-row matrix (mu0, kappa0, alpha0, beta0) for unknown-variance case.")
     }
   }
-  if (is.numeric(clipping) && (clipping < 0 || clipping >= 1)) {
-    stop("The numeric 'clipping' parameter must be between 0 and 1 (exclusive of 1).")
-  }
-  if (is.character(clipping) && clipping != "adaptive") {
-    stop("The character 'clipping' parameter must be 'adaptive'.")
-  }
-  if (is.numeric(clipping) && clipping > 0 && (clipping * arms) > 1) {
-    stop("Invalid numeric 'clipping' value: clipping * arms must be <= 1 to allow for consistent bounds across all arms and sum of probabilities to be 1.")
-  }
+
 
   # Extract true parameters from modelpar for convenience
   true_means <- modelpar[1, ]
