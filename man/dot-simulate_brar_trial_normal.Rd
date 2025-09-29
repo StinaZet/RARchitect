@@ -14,7 +14,8 @@
   clipping = 0,
   burnin = 0,
   postprobmethod,
-  ensure_all_arms_sampled = FALSE
+  ensure_all_arms_sampled = FALSE,
+  known_var = FALSE
 )
 }
 \arguments{

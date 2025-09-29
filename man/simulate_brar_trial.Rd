@@ -9,6 +9,7 @@ simulate_brar_trial(
   arms = 2,
   N,
   blocksize,
+  known_var = FALSE,
   priors,
   modelpar,
   tuning = 1,
@@ -30,21 +31,33 @@ Must be either \code{"binary"} or \code{"normal"}.}
 
 \item{blocksize}{Numeric. (Fixed) size of each block of participants for the adaptive randomization.}
 
+\item{known_var}{Logical. Indicates if the variance for the \code{"normal"} outcome type
+is known (\code{TRUE}) or unknown (\code{FALSE}). Defaults to \code{FALSE}.}
+
 \item{priors}{Matrix. Defines the prior parameters for the Bayesian model of each arm.
-The structure of this matrix depends on \code{outcome_type}:
+The structure of this matrix depends on \code{outcome_type} and \code{known_var}:
 \itemize{
 \item If \code{outcome_type = "binary"}: A 2-row matrix where the first row contains the alpha
 parameters and the second row contains the beta parameters for the Beta
 distributions of each arm. The number of columns must match \code{arms}.
 e.g., \code{matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE)} for two arms with uniform Beta(1,1) priors.
-\item If \code{outcome_type = "normal"}: A 2-row matrix containing the Normal prior parameters
-for the mean of each arm (assuming known population variance). Each column
+\item If \code{outcome_type = "normal"} and \code{known_var = TRUE}: A 2-row matrix
+containing the Normal prior parameters for the mean of each arm . Each column
 corresponds to an arm. Rows should be:
 \enumerate{
 \item Prior mean for the arm's mean.
 \item Prior standard deviation of the arm's mean.
-Example for two arms with N(0,1) priors for means:
-\code{matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)}
+Example for two arms with N(0,10) priors for means:
+\code{matrix(c(0, 0, 10, 10), nrow = 2, byrow = TRUE)}
+\item If \code{outcome_type = "normal"} and \code{known_var = FALSE}:  A 4-row matrix
+containing the prior parameters for the mean of each arm . Each column
+corresponds to an arm. Rows should be:
+\item mu0: prior mean for the arm's mean.
+\item kappa: "strength" of the prior mean (like a prior sample size).
+\item alpha: prior shape for the variance.
+\item beta: prior scale for the variance.
+Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
+\code{matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)}
 }
 }}
 
@@ -144,7 +157,7 @@ prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 
 results_normal <- simulate_brar_trial(
 outcome_type = "normal",
-arms = 2, N = 200, blocksize = 10,
+arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 priors = prior_params_norm,
 modelpar = model_params_norm,
 tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,

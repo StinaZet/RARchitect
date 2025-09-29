@@ -118,7 +118,7 @@
 #'
 #' results_normal <- simulate_brar_trial(
 #' outcome_type = "normal",
-#' arms = 2, N = 200, blocksize = 10,
+#' arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
 #' tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
@@ -201,7 +201,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     #}
 
     results <- .simulate_brar_trial_binary(
-      arms = arms, N = N, blocksize = blocksize, known_var = FALSE,
+      arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       ensure_all_arms_sampled = ensure_all_arms_sampled,

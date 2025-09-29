@@ -302,7 +302,7 @@
           }
         }
       }
-      current_range_end <- current_range_end + block_size
+      current_range_end <- current_range_end + current_block_size
     }
 
 
