@@ -12,20 +12,31 @@
 #' @param arms Numeric. Number of arms in the trial.
 #' @param N Numeric. Total sample size for the trial.
 #' @param blocksize Numeric. (Fixed) size of each block of participants for the adaptive randomization.
+#' @param known_var Logical. Indicates if the variance for the `"normal"` outcome type
+#' is known (`TRUE`) or unknown (`FALSE`). Defaults to `FALSE`.
 #' @param priors Matrix. Defines the prior parameters for the Bayesian model of each arm.
-#' The structure of this matrix depends on `outcome_type`:
+#' The structure of this matrix depends on `outcome_type` and `known_var`:
 #' \itemize{
 #' \item If `outcome_type = "binary"`: A 2-row matrix where the first row contains the alpha
 #' parameters and the second row contains the beta parameters for the Beta
 #' distributions of each arm. The number of columns must match `arms`.
 #' e.g., `matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE)` for two arms with uniform Beta(1,1) priors.
-#' \item If `outcome_type = "normal"`: A 2-row matrix containing the Normal prior parameters
-#' for the mean of each arm (assuming known population variance). Each column
+#' \item If `outcome_type = "normal"` and `known_var = TRUE`: A 2-row matrix
+#' containing the Normal prior parameters for the mean of each arm . Each column
 #' corresponds to an arm. Rows should be:
 #' 1. Prior mean for the arm's mean.
 #' 2. Prior standard deviation of the arm's mean.
-#' Example for two arms with N(0,1) priors for means:
-#' `matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)`
+#' Example for two arms with N(0,10) priors for means:
+#' `matrix(c(0, 0, 10, 10), nrow = 2, byrow = TRUE)`
+#' \item If `outcome_type = "normal"` and `known_var = FALSE`:  A 4-row matrix
+#' containing the prior parameters for the mean of each arm . Each column
+#' corresponds to an arm. Rows should be:
+#' 1. mu0: prior mean for the arm's mean.
+#' 2. kappa: "strength" of the prior mean (like a prior sample size).
+#' 3. alpha: prior shape for the variance.
+#' 4. beta: prior scale for the variance.
+#' Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
+#' `matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)`
 #' }
 #' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
 #' data generating process. The structure depends on `outcome_type`:
@@ -134,7 +145,7 @@
 #' tail(results_binary_tuned)
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
-                                arms = 2, N, blocksize,
+                                arms = 2, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 ensure_all_arms_sampled = FALSE,
                                 postprobmethod = "simulation",
@@ -182,12 +193,15 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     if (!(postprobmethod %in% c("simulation", "exact"))) {
       stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
     }
+    if (known_var == TRUE) {
+      warning("You have chosen the variance to be known, this option is only available for normal outcome.")
+    }
     #if (postprobmethod == "simulation") {
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     #}
 
     results <- .simulate_brar_trial_binary(
-      arms = arms, N = N, blocksize = blocksize,
+      arms = arms, N = N, blocksize = blocksize, known_var = FALSE,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       ensure_all_arms_sampled = ensure_all_arms_sampled,
@@ -206,7 +220,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     #}
 
     results <- .simulate_brar_trial_normal(
-      arms = arms, N = N, blocksize = blocksize,
+      arms = arms, N = N, blocksize = blocksize, known_var = known_var,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       ensure_all_arms_sampled = ensure_all_arms_sampled,

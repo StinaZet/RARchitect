@@ -68,3 +68,30 @@ posterior_norm_exact = function(means, sds)
   ap_arm2 = 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))
 }
+
+
+
+# Helper function to estimate Thompson Sampling allocation probabilities for Normal outcomes
+# with unknown population variance (Normal-Inverse-Gamma prior).
+# This function calculates allocation probabilities by performing Monte Carlo
+# simulations from the posterior distributions of the means for each arm and
+# determining which arm's sampled mean is the highest.
+posterior_norm_unknownvar_sim <- function(M = 10000, mu_n, kappa_n, alpha_n, beta_n) {
+  K = length(mu_n)   # number of arms
+  samples = matrix(NA, nrow = M, ncol = K)
+
+  # Sample posterior means for each arm
+  for (k in 1:K) {
+    scale_k = sqrt(beta_n[k] / (alpha_n[k] * kappa_n[k]))
+    df_k = 2 * alpha_n[k]
+    samples[, k] = mu_n[k] + scale_k * stats::rt(M, df = df_k)
+  }
+
+  # For each Monte Carlo draw, find which arm has the highest sampled mean
+  winners = max.col(samples, ties.method = "first")
+
+  # Compute allocation probabilities = frequency each arm is best
+  ap = tabulate(winners, nbins = K) / M
+  return(ap)
+}
+

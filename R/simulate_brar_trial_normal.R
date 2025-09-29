@@ -17,7 +17,8 @@
 #' @keywords internal
 .simulate_brar_trial_normal <- function(arms = 2, N, blocksize, priors, modelpar,
                                         tuning = 1, clipping = 0, burnin = 0,
-                                        postprobmethod, ensure_all_arms_sampled = FALSE)
+                                        postprobmethod, ensure_all_arms_sampled = FALSE,
+                                        known_var = FALSE)
 {
   # --- Input Validation and Setup ---
   # Only specific validation relevant to this internal function.
@@ -25,8 +26,14 @@
   if (!is.matrix(modelpar) || nrow(modelpar) != 2 || ncol(modelpar) != arms) {
     stop("'modelpar' must be a 2-row matrix with 'arms' columns (first row: true means, second row: true sds).")
   }
-  if (!is.matrix(priors) || nrow(priors) != 2 || ncol(priors) != arms) {
-    stop("'priors' must be a 2-row matrix with 'arms' columns (first row: mu0, second row: tau0).")
+  if (known_var) {
+    if (!is.matrix(priors) || nrow(priors) != 2 || ncol(priors) != arms) {
+      stop("'priors' must be a 2-row matrix (mu0, tau0) for known-variance case.")
+    }
+  } else {
+    if (!is.matrix(priors) || nrow(priors) != 4 || ncol(priors) != arms) {
+      stop("'priors' must be a 4-row matrix (mu0, kappa0, alpha0, beta0) for unknown-variance case.")
+    }
   }
   if (is.numeric(clipping) && (clipping < 0 || clipping >= 1)) {
     stop("The numeric 'clipping' parameter must be between 0 and 1 (exclusive of 1).")
@@ -59,14 +66,25 @@
   allocation_probs_matrix <- matrix(NA, nrow = N, ncol = arms)
   colnames(allocation_probs_matrix) <- paste0("AlloProb_Arm", 1:arms)
 
-  # Initialize Normal-Normal posterior parameters for each arm
-  current_posterior_mu_params <- priors[1, ] # mu0
-  current_posterior_tau2_params <- priors[2, ]^2 # tau0^2 (note: priors[2, ] should be tau0, not tau0^2)
+  # --- Initialize Priors ---
+  if (known_var) {
+    # Normal-Normal
+    current_mu <- priors[1, ]
+    current_tau2 <- priors[2, ]^2
+  } else {
+    # Normal-Inverse-Gamma
+    current_mu    <- priors[1, ]
+    current_kappa <- priors[2, ]
+    current_alpha <- priors[3, ]
+    current_beta  <- priors[4, ]
+  }
 
   # Count of observations for each arm (n_k)
-  n_k_counts <- rep(0, arms)
+  n_k <- rep(0, arms)
   # Sum of outcomes for each arm (sum_y_k)
   sum_y_k <- rep(0, arms)
+  # Sum of squared outcomes for each arm (sum_y_k)
+  sum_y2_k <- rep(0, arms)
 
   current_range_end <- 0
 
@@ -80,7 +98,7 @@
 
   # --- Simulation for burn-in ---
   if (burnin > 0 && burnin <= N) {
-    burnin_indices = 1:burnin
+    burnin_idx = 1:burnin
 
     # Generate roughly balanced allocation
     full_cycles = floor(burnin / arms)       # number of full cycles
@@ -95,48 +113,64 @@
     }
 
     # Shuffle to avoid ordering bias
-    selected_arm[burnin_indices] = sample(arm_assignments, burnin)
+    selected_arm[burnin_idx] = sample(arm_assignments, burnin)
 
     # Simulate outcomes for burn-in participants
-    outcomes[burnin_indices] <- stats::rnorm(burnin,
-                                             mean = true_means[selected_arm[burnin_indices]],
-                                             sd = true_sds[selected_arm[burnin_indices]])
+    outcomes[burnin_idx] <- stats::rnorm(burnin,
+                                         mean = true_means[selected_arm[burnin_idx]],
+                                         sd = true_sds[selected_arm[burnin_idx]])
 
 
-    batch_number[burnin_indices] = 1
+    batch_number[burnin_idx] = 1
 
     # Store allocation probabilities (equal for burn-in)
-    allocation_probs_matrix[burnin_indices, ] = matrix(
+    allocation_probs_matrix[burnin_idx, ] = matrix(
       rep(1/arms, each = burnin),
       ncol = arms, byrow = TRUE
     )
 
     for (k in 1:arms) {
-      arm_k_burnin_outcomes <- outcomes[selected_arm[burnin_indices] == k]
-      n_k_counts[k] <- n_k_counts[k] + length(arm_k_burnin_outcomes)
-      sum_y_k[k] <- sum_y_k[k] + sum(arm_k_burnin_outcomes)
+      yk <- outcomes[burnin_idx][selected_arm[burnin_idx] == k]
+      n_k[k] <- length(yk)
+      sum_y_k[k] <- sum(yk)
+      sum_y2_k[k] <- sum(yk^2)
     }
 
     # Update posterior parameters after burn-in
     for (k in 1:arms) {
-      if (n_k_counts[k] > 0) {
-        mu0_k <- priors[1, k]
-        tau2_0k_orig <- priors[2, k] # This is tau0, need to square for variance
-        sigma2_k <- true_vars[k] # Known population variance for arm k
-
-        current_posterior_tau2_params[k] <- 1 / (1 / (tau2_0k_orig^2) + n_k_counts[k] / sigma2_k) # Use tau0^2 here
-        current_posterior_mu_params[k] <- current_posterior_tau2_params[k] *
-          (mu0_k / (tau2_0k_orig^2) + sum_y_k[k] / sigma2_k) # Use tau0^2 here
+      if (n_k[k] > 0) {
+        if (known_var) {
+          # Known variance case
+          mu0 <- priors[1, k] # Prior mean
+          tau0 <- priors[2, k] # Prior sd
+          sigma2 <- true_vars[k] # True variance
+          current_tau2[k] <- 1 / (1 / (tau0^2) + n_k[k] / sigma2) # Posterior sd
+          current_mu[k]   <- current_tau2[k] * (mu0 / (tau0^2) + sum_y_k[k] / sigma2) # Posterior mean
+        } else {
+          # Unknown variance case
+          # Prior values
+          mu0 <- priors[1, k]
+          kappa0 <- priors[2, k]
+          alpha0 <- priors[3, k]
+          beta0 <- priors[4, k]
+          # Data from the burn-in
+          ybar <- sum_y_k[k] / n_k[k]
+          S <- sum_y2_k[k] - n_k[k] * ybar^2
+          # Posterior values
+          current_kappa[k] <- kappa0 + n_k[k]
+          current_mu[k]    <- (kappa0 * mu0 + n_k[k] * ybar) / current_kappa[k]
+          current_alpha[k] <- alpha0 + n_k[k] / 2
+          current_beta[k]  <- beta0 + 0.5 * S +
+            (kappa0 * n_k[k]) / (2 * current_kappa[k]) * (ybar - mu0)^2
+        }
       }
     }
-
     current_range_end <- burnin
   }
 
   # --- Main Simulation Loop (Block-wise) ---
   start_block_idx <- ifelse(burnin > 0 && burnin <= N, 2, 1)
   if (N == 0) start_block_idx = 1
-
 
   for (i in start_block_idx:Nblocks) {
     current_block_size <- block_sizes[i]
@@ -147,27 +181,28 @@
       if (current_block_size <= 0) break
     }
 
-    current_block_indices <- (current_range_end + 1):(current_range_end + current_block_size)
-    batch_number[current_block_indices] <- i
-
-    current_posterior_sds_of_mean <- sqrt(current_posterior_tau2_params)
+    idx <- (current_range_end + 1):(current_range_end + current_block_size)
+    batch_number[idx] <- i
 
 
     # Calculate the raw allocation probabilities for each arm
-    # Assumes posterior_bin_sim and posterior_bin_exact are available elsewhere in package
-    if(postprobmethod == "simulation") {
-      alloc_probs_raw = posterior_norm_sim(
-        means = current_posterior_mu_params,
-        sds = current_posterior_sds_of_mean
-      )
-    } else if(postprobmethod == "exact") {
-      alloc_probs_raw = posterior_norm_exact(
-        means = current_posterior_mu_params,
-        sds = current_posterior_sds_of_mean
-      )
+    if (known_var) {
+      post_sds <- sqrt(current_tau2)
+      if (postprobmethod == "simulation") {
+        alloc_probs_raw <- posterior_norm_sim(current_mu, post_sds)
+      } else if(postprobmethod == "exact") {
+        alloc_probs_raw <- posterior_norm_exact(current_mu, post_sds)
+      } else {
+        # This case should be caught by main function validation
+        stop("Internal Error: Invalid postprobmethod.")
+      }
     } else {
-      # This case should be caught by main function validation
-      stop("Internal Error: Invalid postprobmethod.")
+      alloc_probs_raw <- posterior_norm_unknownvar_sim(
+        mu_n = current_mu,
+        kappa_n = current_kappa,
+        alpha_n = current_alpha,
+        beta_n = current_beta
+      )
     }
 
     # --- Apply tuning parameter (c) ---
@@ -213,53 +248,63 @@
 
     alloc_probs_final = round(alloc_probs_final, digits = 10)
 
-    allocation_probs_matrix[current_block_indices, ] <- matrix(
+    allocation_probs_matrix[idx, ] <- matrix(
       rep(alloc_probs_final, each = current_block_size),
       ncol = arms, byrow = FALSE
     )
 
-    selected_arm[current_block_indices] <- sample(
+    selected_arm[idx] <- sample(
       1:arms, current_block_size, prob = alloc_probs_final, replace = TRUE
     )
 
     # --- Ensure All Arms are Sampled (Exploration Guarantee) ---
-    if (ensure_all_arms_sampled && length(unique(selected_arm[current_block_indices])) != arms && current_block_size >= arms) {
-      missing_arms <- setdiff(1:arms, unique(selected_arm[current_block_indices]))
+    if (ensure_all_arms_sampled && length(unique(selected_arm[idx])) != arms && current_block_size >= arms) {
+      missing_arms <- setdiff(1:arms, unique(selected_arm[idx]))
       if (length(missing_arms) > 0 && length(missing_arms) <= current_block_size) {
-        selected_arm[sample(current_block_indices, length(missing_arms), replace = FALSE)] <- missing_arms
+        selected_arm[sample(idx, length(missing_arms), replace = FALSE)] <- missing_arms
       }
     }
 
     # --- Simulate Outcomes ---
-    outcomes[current_block_indices] <- stats::rnorm(
+    outcomes[idx] <- stats::rnorm(
       current_block_size,
-      mean = true_means[selected_arm[current_block_indices]],
-      sd = true_sds[selected_arm[current_block_indices]]
+      mean = true_means[selected_arm[idx]],
+      sd = true_sds[selected_arm[idx]]
     )
 
     # --- Update Posterior Parameters for the Next Block ---
     if (i < Nblocks) {
-      for (k in 1:arms) {
-        arm_k_current_block_outcomes <- outcomes[current_block_indices][selected_arm[current_block_indices] == k]
-        n_k_new_obs <- length(arm_k_current_block_outcomes)
-
-        if (n_k_new_obs > 0) {
-          n_k_counts[k] <- n_k_counts[k] + n_k_new_obs
-          sum_y_k[k] <- sum_y_k[k] + sum(arm_k_current_block_outcomes)
-
-          mu0_k <- priors[1, k]
-          tau2_0k_orig <- priors[2, k] # This is tau0, not tau0^2
-          sigma2_k <- true_vars[k]
-
-          current_posterior_tau2_params[k] <- 1 / (1 / (tau2_0k_orig^2) + n_k_counts[k] / sigma2_k)
-          current_posterior_mu_params[k] <- current_posterior_tau2_params[k] *
-            (mu0_k / (tau2_0k_orig^2) + sum_y_k[k] / sigma2_k)
+        for (k in 1:arms) {
+          yk <- outcomes[idx][selected_arm[idx] == k]
+          if (length(yk) > 0) {
+            n_k[k] <- n_k[k] + length(yk)
+            sum_y_k[k] <- sum_y_k[k] + sum(yk)
+            sum_y2_k[k] <- sum_y2_k[k] + sum(yk^2)
+            if (known_var) {
+              mu0 <- priors[1, k]
+              tau0 <- priors[2, k]
+              sigma2 <- true_vars[k]
+              current_tau2[k] <- 1 / (1 / (tau0^2) + n_k[k] / sigma2)
+              current_mu[k]   <- current_tau2[k] * (mu0 / (tau0^2) + sum_y_k[k] / sigma2)
+            } else {
+              mu0 <- priors[1, k]
+              kappa0 <- priors[2, k]
+              alpha0 <- priors[3, k]
+              beta0 <- priors[4, k]
+              ybar <- sum_y_k[k] / n_k[k]
+              S <- sum_y2_k[k] - n_k[k] * ybar^2
+              current_kappa[k] <- kappa0 + n_k[k]
+              current_mu[k]    <- (kappa0 * mu0 + n_k[k] * ybar) / current_kappa[k]
+              current_alpha[k] <- alpha0 + n_k[k] / 2
+              current_beta[k]  <- beta0 + 0.5 * S +
+                                  (kappa0 * n_k[k]) / (2 * current_kappa[k]) * (ybar - mu0)^2
+            }
+          }
         }
       }
+      current_range_end <- current_range_end + block_size
     }
 
-    current_range_end <- current_range_end + current_block_size
-  }
 
   return(
     data.frame(
