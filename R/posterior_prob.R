@@ -111,8 +111,10 @@ posterior_exp_sim <- function(M = 10000, shapes, rates) {
 # exponential outcomes with a Gamma prior. This function calculates allocation
 # probabilities exactly, but it only works for integer alpha and beta parameters.
 posterior_exp_exact <- function(shapes, rates) {
-  a1 <- shapes[1]; b1 <- rates[1]
-  a2 <- shapes[2]; b2 <- rates[2]
+  a1 <- shapes[1]
+  a2 <- shapes[2]
+  b1 <- rates[1]
+  b2 <- rates[2]
   prob <- 0
   for (k in 0:(a1-1)) {
     prob <- prob + choose(a2 + k - 1, k) *
