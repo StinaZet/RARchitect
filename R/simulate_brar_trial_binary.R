@@ -72,10 +72,8 @@
     batch_number[burnin_idx] = 1
 
     # Store the allocation probabilities for burn-in (equal)
-    allocation_probs_matrix[burnin_idx, ] = matrix(
-      rep(1/arms, each = burnin),
-      ncol = arms, byrow = TRUE
-    )
+    allocation_probs_matrix[burnin_idx, ] = matrix(1/arms, nrow = burnin, ncol = arms)
+
     # Initialize Beta distribution parameters (alpha and beta) for each arm
     current_alpha_params = priors[1, ]
     current_beta_params = priors[2, ]

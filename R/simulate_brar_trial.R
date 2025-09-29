@@ -131,11 +131,11 @@
 #' observation_delay = 15)
 #' head(results_normal)
 #'
-#' # Example 3: Binary trial with tuning and clipping and uneven sample size
+#' # Example 3: Binary trial with tuning and clipping
 #' set.seed(103)
 #' results_binary_tuned <- simulate_brar_trial(
 #' outcome_type = "binary",
-#' arms = 2, N = 149, burnin =15, blocksize = 15,
+#' arms = 2, N = 150, burnin = 15, blocksize = 15,
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' modelpar = c(0.7, 0.5),
 #' tuning = 0.5,
@@ -161,14 +161,14 @@
 #'   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
 #'   priors = prior_unvar,
 #'   modelpar = model_unvar,
-#'   tuning = 1, clipping = 0, burnin = 10,
+#'   tuning = 1, clipping = 0, burnin = 20,
 #'   ensure_all_arms_sampled = FALSE,
 #'   postprobmethod = "simulation",
 #'   recruitment_rate = 12,
 #'   observation_delay = 10)
 #' head(results_normal_unvar)
 #'
-#' #' # Example 5: Simulate an Exponential Outcome Trial
+#' # Example 5: Simulate an Exponential Outcome Trial
 #' # True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
 #' set.seed(105)
 #' prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
@@ -176,7 +176,7 @@
 #'
 #' results_exponential <- simulate_brar_trial(
 #'   outcome_type = "exponential",
-#'   arms = 2, N = 120, blocksize = 12,
+#'   arms = 2, N = 120, blocksize = 1,
 #'   priors = prior_params_exp,
 #'   modelpar = true_rates_exp,
 #'   tuning = 1, clipping = 0, burnin = 0,
@@ -186,7 +186,7 @@
 #'   observation_delay = 5)
 #' head(results_exponential)
 #'
-simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
+simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponential"),
                                 arms = 2, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 ensure_all_arms_sampled = FALSE,
@@ -298,9 +298,9 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal"),
     stop("Burn-in period ('burnin') cannot be greater than total sample size ('N').")
   }
 
-  #if (remaining_N > 0 && remaining_N %% blocksize != 0) {
-  #  stop("The number of participants after the burn-in period (N - burnin) must be a multiple of 'blocksize' for consistent trial duration simulation. Please adjust N, burnin, or blocksize.")
-  #}
+  if (remaining_N > 0 && remaining_N %% blocksize != 0) {
+    stop("The number of participants after the burn-in period (N - burnin) must be a multiple of 'blocksize' for consistent trial duration simulation. Please adjust N, burnin, or blocksize.")
+  }
 
   if (N > 0) { # Only run duration simulation if N is positive
     num_main_blocks <- remaining_N / blocksize

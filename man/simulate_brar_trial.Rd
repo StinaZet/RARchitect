@@ -5,7 +5,7 @@
 \title{Simulate a Response Adaptive Randomization (RAR) Trial for Binary or Normal Outcomes}
 \usage{
 simulate_brar_trial(
-  outcome_type = c("binary", "normal"),
+  outcome_type = c("binary", "normal", "exponential"),
   arms = 2,
   N,
   blocksize,
@@ -23,7 +23,7 @@ simulate_brar_trial(
 }
 \arguments{
 \item{outcome_type}{Character. Specifies the type of outcome to simulate.
-Must be either \code{"binary"} or \code{"normal"}.}
+Must be either \code{"binary"}, \code{"normal"}, or \code{"exponential"}.}
 
 \item{arms}{Numeric. Number of arms in the trial.}
 
@@ -58,6 +58,9 @@ corresponds to an arm. Rows should be:
 \item beta: prior scale for the variance.
 Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
 \code{matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)}
+\item If \code{outcome_type = "exponential"}: A 2-row matrix where the first row contains the shape
+parameters and the second row contains the rate parameters for the Gamma
+distributions of each arm. The number of columns must match \code{arms}.
 }
 }}
 
@@ -73,6 +76,8 @@ for each normal arm. Each column corresponds to an arm. Rows should be:
 \item True standard deviation for the arm. It is assumed to be
 the known population standard deviation for the purpose of posterior updates.
 Example for two arms: \code{matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)}
+\item If \code{outcome_type = "exponential"}: A numeric vector with the rates for
+each exponential arm. e.g., \code{c(0.2, 0.1)}.
 }
 }}
 
@@ -148,7 +153,6 @@ postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 5,
 observation_delay = 30)
 head(results_binary)
-print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
 
 # Example 2: Simulate a Normal Outcome Trial
 set.seed(102)
@@ -165,22 +169,60 @@ postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 10,
 observation_delay = 15)
 head(results_normal)
-print(paste("Observed mean Arm 1:", mean(results_normal$Outcome[results_normal$Arm == 1])))
 
 # Example 3: Binary trial with tuning and clipping
 set.seed(103)
 results_binary_tuned <- simulate_brar_trial(
 outcome_type = "binary",
-arms = 2, N = 150, blocksize = 15,
+arms = 2, N = 150, burnin = 15, blocksize = 15,
 priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 modelpar = c(0.7, 0.5),
 tuning = 0.5,
 clipping = 0.05,
-burnin = 0,
 ensure_all_arms_sampled = TRUE,
 postprobmethod = "exact",
 recruitment_rate = 8,
 observation_delay = 20)
 tail(results_binary_tuned)
+
+# Example 4: Simulate a Normal Outcome Trial (unknown variance)
+set.seed(104)
+model_unvar <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+# priors: mu0=0, kappa=0.1, alpha=1, beta=1 for each arm
+prior_unvar <- matrix(c(0, 0,
+                        0.1, 0.1,
+                        1, 1,
+                        1, 1),
+                      nrow = 4, byrow = TRUE)
+
+results_normal_unvar <- simulate_brar_trial(
+  outcome_type = "normal",
+  arms = 2, N = 200, blocksize = 20, known_var = FALSE,
+  priors = prior_unvar,
+  modelpar = model_unvar,
+  tuning = 1, clipping = 0, burnin = 20,
+  ensure_all_arms_sampled = FALSE,
+  postprobmethod = "simulation",
+  recruitment_rate = 12,
+  observation_delay = 10)
+head(results_normal_unvar)
+
+# Example 5: Simulate an Exponential Outcome Trial
+# True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
+set.seed(105)
+prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
+true_rates_exp <- c(0.2, 0.1)
+
+results_exponential <- simulate_brar_trial(
+  outcome_type = "exponential",
+  arms = 2, N = 120, blocksize = 1,
+  priors = prior_params_exp,
+  modelpar = true_rates_exp,
+  tuning = 1, clipping = 0, burnin = 0,
+  ensure_all_arms_sampled = FALSE,
+  postprobmethod = "simulation",
+  recruitment_rate = 6,
+  observation_delay = 5)
+head(results_exponential)
 
 }

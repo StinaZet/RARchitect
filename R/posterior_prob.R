@@ -100,8 +100,8 @@ posterior_norm_unknownvar_sim <- function(M = 10000, mu_n, kappa_n, alpha_n, bet
 # performing Monte Carlo simulations from the posterior distributions of the
 # means for each arm and determining which arm's sampled mean is the highest.
 posterior_exp_sim <- function(M = 10000, shapes, rates) {
-  arm1 <- rgamma(M, shape = shapes[1], rate = rates[1])
-  arm2 <- rgamma(M, shape = shapes[2], rate = rates[2])
+  arm1 <- stats::rgamma(M, shape = shapes[1], rate = rates[1])
+  arm2 <- stats::rgamma(M, shape = shapes[2], rate = rates[2])
   ap_arm1 <- mean(arm1 > arm2)
   ap_arm2 <- 1 - ap_arm1
   return(c(ap_arm1, ap_arm2))

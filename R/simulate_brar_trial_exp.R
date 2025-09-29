@@ -29,7 +29,7 @@
   if (!is.matrix(priors) || nrow(priors) != 2 || ncol(priors) != arms) {
     stop("'priors' must be a 2-row matrix with 'arms' columns (first row: alpha, second row: beta).")
   }
-  if (postprobmethod=="exact" && priors%%1 != 0) {
+  if (postprobmethod=="exact" && sum(priors%%1) != 0) {
     stop("'priors' must be integer values when for exact computation of the posterior probabilities. Use postprobmethod == 'simulation' if you want to use non-integer values.")
   }
   
@@ -75,10 +75,8 @@
     batch_number[burnin_idx] = 1
     
     # Store the allocation probabilities for burn-in (equal)
-    allocation_probs_matrix[burnin_idx, ] = matrix(
-      rep(1/arms, each = burnin),
-      ncol = arms, byrow = TRUE
-    )
+    allocation_probs_matrix[burnin_idx, ] = matrix(1/arms, nrow = burnin, ncol = arms)
+    
     # Initialize Beta distribution parameters (alpha and beta) for each arm
     current_shape = priors[1, ]
     current_rate = priors[2, ]
@@ -191,15 +189,13 @@
       current_block_size, rate = modelpar[selected_arm[current_block_indices]]
     )
     
-    # --- Update Beta Priors for the Next Block ---
+    # --- Update Gamma Priors for the Next Block ---
     if (i < Nblocks) {
       for (k in 1:arms) {
         arm_k_indices_in_batch = current_block_indices[selected_arm[current_block_indices] == k]
-        successes_arm_k = sum(rewards[arm_k_indices_in_batch])
-        failures_arm_k = length(arm_k_indices_in_batch) - successes_arm_k
+        current_shape[k] = current_shape[k] + length(arm_k_indices_in_batch)
+        current_rate[k] = current_rate[k] + sum(rewards[arm_k_indices_in_batch])
         
-        current_shape[k] = current_shape[k] + successes_arm_k
-        current_rate[k] = current_rate[k] + failures_arm_k
       }
     }
     
