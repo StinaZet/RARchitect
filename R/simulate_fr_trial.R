@@ -85,9 +85,6 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
   if (!is.numeric(N) || N %% 1 != 0 || N <= 0) {
     stop("'N' must be a positive integer.")
   }
-  if (!is.numeric(blocksize) || blocksize %% 1 != 0 || blocksize <= 0) {
-    stop("'blocksize' must be a positive integer.")
-  }
   if (recruitment_rate <= 0 || !is.numeric(recruitment_rate)) {
     stop("'recruitment_rate' must be a positive number.")
   }
@@ -118,16 +115,18 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
     allocation_probs = allocation_probs / sum(allocation_probs)
   }
 
-  # If blocksize == 1, block randomisation is equivalent to coin; warn and coerce.
-  if (randmethod == "block" && blocksize == 1) {
-    warning("blocksize == 1: 'block' randomisation is equivalent to 'coin'. Using coin behaviour.")
-    randmethod = "coin"
-  }
-
-  # If blocksize > N, reduce to N (single block)
-  if (randmethod == "block" && blocksize > N) {
-    warning("'blocksize' > N. Using a single block of size N.")
-    blocksize = N
+  # --- Handle blocksize requirements ---
+  if (randmethod == "block") {
+    # Must be provided for block randomisation
+    if (missing(blocksize)) stop("'blocksize' must be specified for block randomisation")
+    if (!is.numeric(blocksize) || blocksize %% 1 != 0 || blocksize <= 0) {
+      stop("'blocksize' must be a positive integer")
+    }
+    # If blocksize > N, reduce to single block
+    if (blocksize > N) blocksize = N
+  } else {
+    # For coin or urn, ignore blocksize
+    blocksize = NULL
   }
 
   # --- Generate Arm assignments according to randmethod ---
