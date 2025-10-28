@@ -307,7 +307,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       randmethod = randmethod,
-      postprobmethod = postprobmethod
+      postprobmethod = postprobmethod,
+      multiarm_method = multiarm_method
     )
   } else if (distribution == "normal") {
 
@@ -320,7 +321,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       randmethod = randmethod,
-      postprobmethod = postprobmethod
+      postprobmethod = postprobmethod,
+      multiarm_method = multiarm_method
     )
   } else if (distribution == "exponential") {
 
@@ -333,7 +335,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
       randmethod = randmethod,
-      postprobmethod = postprobmethod
+      postprobmethod = postprobmethod,
+      multiarm_method = multiarm_method
     )
   } else {
     # This block should ideally not be reached due to match.arg, but as a safeguard.
