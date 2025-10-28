@@ -196,7 +196,7 @@
 #' head(results_exponential)
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
-                                distribution = c("bernoulli", "normal", "exponential")
+                                distribution = c("bernoulli", "normal", "exponential"),
                                 arms = 2, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 randmethod = "coin",
