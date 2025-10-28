@@ -188,7 +188,7 @@
 
       # Randomise if the floor or ceiling is used.
       u = stats::rbinom(1, 1, (target - below))
-      e = u * above + (1 - u) * floor
+      e = u * above + (1 - u) * below
 
       # The number of patients on each arm.
       arm_assignments = c(rep(1, times = e), rep(2, times = blocksize - e))
@@ -207,6 +207,9 @@
       # The first values of the probabilities are the usual probabilities.
       urnprob = alloc_probs_final[1]
 
+      treatment = c()
+      outcome = c()
+
       # The alpha value for the urn-design.
       alpha = 3
       for (iii in 1:blocksize)
@@ -224,7 +227,7 @@
       # Save in the relevant matrices for output.
       # Store the allocation probabilities for the current block
       allocation_probs_matrix[current_block_indices, ] = matrix(
-        c(urnprob, (1 - urnprob)),
+        c(urnprob[1:blocksize], (1 - urnprob[1:blocksize])),
         ncol = arms, byrow = FALSE
       )
 

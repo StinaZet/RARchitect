@@ -81,7 +81,7 @@
 #' as a single initial block, allocated using equal randomization. Defaults to 0.
 #' @param randmethod Character. Specifies the randomisation method for `blocksize > 1`
 #' and `arms=2`. Defaults to `"coin"`. Other options are `"urn"`, which is the mass-weighted
-#' urn-design from Zhao (2015), and `"block"`, which is the modified permuted
+#' urn-design from Zhao (2015) with alpha=3, and `"block"`, which is the modified permuted
 #' block-design from Proper, Connett, and Murray (2021). For `arms>2`, `"coin"`
 #' is the only randomisation method.
 #' @param postprobmethod Character. (Applicable only when `outcome_type = "binary"`).
@@ -114,7 +114,7 @@
 #' arms = 2, N = 100, blocksize = 10,
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-#' tuning = 1, clipping = 0, burnin = 0, randmetod = "coin",
+#' tuning = 1, clipping = 0, burnin = 0, randmethod = "coin",
 #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 5,
 #' observation_delay = 30)
@@ -216,7 +216,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     stop("For outcome_type = 'cont', distribution must be 'normal' or 'exponential'.")
   }
 
-  if (randmethod != "coin" || randmethod != "urn" || randmethod != "block") {
+  if (randmethod != "coin" && randmethod != "urn" && randmethod != "block") {
     stop("The randomisation method must be 'coin', 'urn', or 'block'.")
   }
 
@@ -245,10 +245,10 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   if (burnin < 0 || !is.numeric(burnin) || burnin %% 1 != 0) {
     stop("The 'burnin' parameter must be a non-negative integer.")
   }
-  if (randmethod != "coin" && blocksize == 1) {
-    stop("If the number of experimental arms is larger than 1, only the coin randomisation method (randmethod = 'coin') is possible.")
+  if (randmethod != "coin" && arms > 2) {
+    stop("If the number of arms is larger than 2, only the coin randomisation method (randmethod = 'coin') is possible.")
   }
-  if (randmethod != "coin" && arms > 1) {
+  if (randmethod != "coin" && blocksize == 1) {
     stop("If blocksize is equal to 1, only the coin randomisation method (randmethod = 'coin') is possible.")
   }
   # Validation for renamed parameters
