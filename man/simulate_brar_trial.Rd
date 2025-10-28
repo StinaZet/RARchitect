@@ -5,7 +5,8 @@
 \title{Simulate a Response Adaptive Randomization (RAR) Trial for Binary or Normal Outcomes}
 \usage{
 simulate_brar_trial(
-  outcome_type = c("binary", "normal", "exponential"),
+  outcome_type = c("binary", "cont"),
+  distribution = c("bernoulli", "normal", "exponential"),
   arms = 2,
   N,
   blocksize,
@@ -15,7 +16,7 @@ simulate_brar_trial(
   tuning = 1,
   clipping = 0,
   burnin = 0,
-  ensure_all_arms_sampled = FALSE,
+  randmethod = "coin",
   postprobmethod = "simulation",
   recruitment_rate = 1e+05,
   observation_delay = 0
@@ -23,7 +24,10 @@ simulate_brar_trial(
 }
 \arguments{
 \item{outcome_type}{Character. Specifies the type of outcome to simulate.
-Must be either \code{"binary"}, \code{"normal"}, or \code{"exponential"}.}
+Must be either \code{"binary"} or \code{"cont"}.}
+
+\item{distribution}{Character. Specifies the distribution of the outcome.
+Must be either \code{"bernoulli"}, \code{"normal"}, or \code{"exponential"}.}
 
 \item{arms}{Numeric. Number of arms in the trial.}
 
@@ -67,16 +71,16 @@ distributions of each arm. The number of columns must match \code{arms}.
 \item{modelpar}{Matrix or Numeric vector. Specifies the true parameters for each arm's
 data generating process. The structure depends on \code{outcome_type}:
 \itemize{
-\item If \code{outcome_type = "binary"}: A numeric vector with the true success
+\item If \code{distribution = "bernoulli"}: A numeric vector with the true success
 probabilities for each Bernoulli arm. e.g., \code{c(0.6, 0.4)}.
-\item If \code{outcome_type = "normal"}: A 2-row matrix specifying the true parameters
+\item If \code{distribution = "normal"}: A 2-row matrix specifying the true parameters
 for each normal arm. Each column corresponds to an arm. Rows should be:
 \enumerate{
 \item True mean for the arm.
 \item True standard deviation for the arm. It is assumed to be
 the known population standard deviation for the purpose of posterior updates.
 Example for two arms: \code{matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)}
-\item If \code{outcome_type = "exponential"}: A numeric vector with the rates for
+\item If \code{distribution = "exponential"}: A numeric vector with the rates for
 each exponential arm. e.g., \code{c(0.2, 0.1)}.
 }
 }}
@@ -106,9 +110,11 @@ It is \strong{required} that \code{clipping * arms <= 1} for consistent bounds.
 before standard block processing begins. These participants are treated
 as a single initial block, allocated using equal randomization. Defaults to 0.}
 
-\item{ensure_all_arms_sampled}{Logical. If TRUE, ensures that at least
-one participant is allocated to each arm within each block (if \code{blocksize >= arms}).
-This is useful for ensuring initial exploration. Defaults to FALSE.}
+\item{randmethod}{Character. Specifies the randomisation method for \code{blocksize > 1}
+and \code{arms=2}. Defaults to \code{"coin"}. Other options are \code{"urn"}, which is the mass-weighted
+urn-design from Zhao (2015), and \code{"block"}, which is the modified permuted
+block-design from Proper, Connett, and Murray (2021). For \code{arms>2}, \code{"coin"}
+is the only randomisation method.}
 
 \item{postprobmethod}{Character. (Applicable only when \code{outcome_type = "binary"}).
 Method for calculating posterior probabilities. Can be \code{"simulation"} or \code{"exact"}. Defaults to \code{"simulation"}.}
@@ -145,10 +151,11 @@ duration based on a Poisson recruitment process.
 set.seed(101)
 results_binary <- simulate_brar_trial(
 outcome_type = "binary",
+distribution = "bernoulli",
 arms = 2, N = 100, blocksize = 10,
 modelpar = c(0.6, 0.4),
 priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
+tuning = 1, clipping = 0, burnin = 0, randmetod = "coin",
 postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 5,
 observation_delay = 30)
@@ -160,11 +167,12 @@ model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
 prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 
 results_normal <- simulate_brar_trial(
-outcome_type = "normal",
+outcome_type = "cont",
+distribution = "normal",
 arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 priors = prior_params_norm,
 modelpar = model_params_norm,
-tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
+tuning = 1, clipping = 0, burnin = 10, randmethod = "urn",
 postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 10,
 observation_delay = 15)
@@ -174,12 +182,13 @@ head(results_normal)
 set.seed(103)
 results_binary_tuned <- simulate_brar_trial(
 outcome_type = "binary",
+distribution = "bernoulli",
 arms = 2, N = 150, burnin = 15, blocksize = 15,
 priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 modelpar = c(0.7, 0.5),
 tuning = 0.5,
 clipping = 0.05,
-ensure_all_arms_sampled = TRUE,
+randmethod = "block",
 postprobmethod = "exact",
 recruitment_rate = 8,
 observation_delay = 20)
@@ -196,12 +205,13 @@ prior_unvar <- matrix(c(0, 0,
                       nrow = 4, byrow = TRUE)
 
 results_normal_unvar <- simulate_brar_trial(
-  outcome_type = "normal",
+  outcome_type = "cont",
+  distribution = "normal",
   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
   priors = prior_unvar,
   modelpar = model_unvar,
   tuning = 1, clipping = 0, burnin = 20,
-  ensure_all_arms_sampled = FALSE,
+  randmethod = "coin",
   postprobmethod = "simulation",
   recruitment_rate = 12,
   observation_delay = 10)
@@ -214,12 +224,13 @@ prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) p
 true_rates_exp <- c(0.2, 0.1)
 
 results_exponential <- simulate_brar_trial(
-  outcome_type = "exponential",
+  outcome_type = "cont",
+  distribution = "exponential",
   arms = 2, N = 120, blocksize = 1,
   priors = prior_params_exp,
   modelpar = true_rates_exp,
   tuning = 1, clipping = 0, burnin = 0,
-  ensure_all_arms_sampled = FALSE,
+  randmethod = "coin",
   postprobmethod = "simulation",
   recruitment_rate = 6,
   observation_delay = 5)

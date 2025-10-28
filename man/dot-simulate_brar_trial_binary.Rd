@@ -14,7 +14,7 @@
   clipping = 0,
   burnin = 0,
   postprobmethod,
-  ensure_all_arms_sampled = FALSE
+  randmethod = "coin"
 )
 }
 \arguments{
@@ -37,7 +37,8 @@ and the second row contains beta parameters for the Beta distributions of each a
 
 \item{postprobmethod}{Character. Method for calculating posterior probabilities ("simulation" or "exact").}
 
-\item{ensure_all_arms_sampled}{Logical. If TRUE, ensures at least one arm is sampled per block.}
+\item{randmethod}{Character. The randomisation method when blocksize > 1 and
+arms = 2. Defaults to "coin".}
 }
 \description{
 This is an internal helper function for \code{simulate_brar_trial}. It simulates a

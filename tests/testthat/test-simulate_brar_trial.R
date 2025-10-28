@@ -1,6 +1,7 @@
 test_that("tuning 0 gives ER", {
  a = simulate_brar_trial(
      outcome_type = "binary",
+     distribution = "bernoulli",
      arms = 2, N = 100, blocksize = 10,
      modelpar = c(0.6, 0.4),
      priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),

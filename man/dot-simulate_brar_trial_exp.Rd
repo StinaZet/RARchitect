@@ -14,7 +14,7 @@
   clipping = 0,
   burnin = 0,
   postprobmethod,
-  ensure_all_arms_sampled = FALSE
+  randmethod = "coin"
 )
 }
 \arguments{
@@ -24,8 +24,8 @@
 
 \item{blocksize}{Numeric. (Fixed) size of each block of participants.}
 
-\item{priors}{Matrix. A 2-row matrix where the first row contains XXX parameters
-and the second row contains XXX parameters for the Gamma distributions of each arm.}
+\item{priors}{Matrix. A 2-row matrix where the first row contains the shape parameters
+and the second row contains the rate parameters for the Gamma distributions of each arm.}
 
 \item{modelpar}{Numeric vector. True model parameters for each exponential arm.}
 
@@ -37,7 +37,8 @@ and the second row contains XXX parameters for the Gamma distributions of each a
 
 \item{postprobmethod}{Character. Method for calculating posterior probabilities ("simulation" or "exact").}
 
-\item{ensure_all_arms_sampled}{Logical. If TRUE, ensures at least one arm is sampled per block.}
+\item{randmethod}{Character. The randomisation method when blocksize > 1 and
+arms = 2. Defaults to "coin".}
 }
 \description{
 This is an internal helper function for \code{simulate_brar_trial}. It simulates a

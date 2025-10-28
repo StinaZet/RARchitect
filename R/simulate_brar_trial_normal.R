@@ -295,7 +295,7 @@
 
       # Save in the relevant matrices for output.
       # Store the allocation probabilities for the current block
-      allocation_probs_matrix[current_block_indices, ] = matrix(
+      allocation_probs_matrix[idx, ] = matrix(
         c(urnprob, (1 - urnprob)),
         ncol = arms, byrow = FALSE
       )
