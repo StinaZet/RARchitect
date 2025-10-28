@@ -186,7 +186,8 @@
 #'   observation_delay = 5)
 #' head(results_exponential)
 #'
-simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponential"),
+simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
+                                distribution = c("bernoulli", "normal", "exponential")
                                 arms = 2, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 ensure_all_arms_sampled = FALSE,
@@ -194,8 +195,17 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponentia
                                 recruitment_rate = 100000,
                                 observation_delay = 0) {
 
-  # Input validation for outcome_type
-  outcome_type <- match.arg(outcome_type)
+  # Input validation for outcome_type and distribution.
+  outcome_type = match.arg(outcome_type)
+  distribution = match.arg(distribution)
+
+  # Check combinations of outcome_type and distribution.
+  if (outcome_type == "binary" && distribution != "bernoulli") {
+    stop("For outcome_type = 'binary', distribution must be 'bernoulli'.")
+  }
+  if (outcome_type == "cont" && !(distribution %in% c("normal", "exponential"))) {
+    stop("For outcome_type = 'cont', distribution must be 'normal' or 'exponential'.")
+  }
 
   # Validate common parameters
   if (N <= 0 || !is.numeric(N) || N %% 1 != 0) {
@@ -244,7 +254,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponentia
   }
 
   # Delegate to specific simulation functions based on outcome_type
-  if (outcome_type == "binary") {
+  if (distribution == "bernoulli") {
     if (known_var == TRUE) {
       warning("You have chosen the variance to be known, this option is only available for normal outcome.")
     }
@@ -259,7 +269,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponentia
       ensure_all_arms_sampled = ensure_all_arms_sampled,
       postprobmethod = postprobmethod
     )
-  } else if (outcome_type == "normal") {
+  } else if (distribution == "normal") {
 
     #if (postprobmethod == "simulation") {
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
@@ -272,7 +282,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "normal", "exponentia
       ensure_all_arms_sampled = ensure_all_arms_sampled,
       postprobmethod = postprobmethod
     )
-  } else if (outcome_type == "exponential") {
+  } else if (distribution == "exponential") {
 
     #if (postprobmethod == "simulation") {
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
