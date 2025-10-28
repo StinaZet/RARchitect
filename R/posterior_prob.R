@@ -122,18 +122,38 @@ posterior_exp_sim <- function(M = 10000, shapes, rates) {
 # exponential outcomes with a Gamma prior. This function calculates allocation
 # probabilities exactly, but it only works for integer alpha and beta parameters.
 posterior_exp_exact <- function(shapes, rates) {
-  a1 <- shapes[1]
-  a2 <- shapes[2]
-  b1 <- rates[1]
-  b2 <- rates[2]
-  prob <- 0
+  a1 = shapes[1]
+  a2 = shapes[2]
+  b1 = rates[1]
+  b2 = rates[2]
+  prob = 0
   for (k in 0:(a1-1)) {
-    prob <- prob + choose(a2 + k - 1, k) *
+    prob = prob + choose(a2 + k - 1, k) *
       (b1 / (b1 + b2))^k *
       (b2 / (b1 + b2))^a2
   }
-  ap_arm1 <- prob
-  ap_arm2 <- 1 - prob
+  ap_arm1 = prob
+  ap_arm2 = 1 - prob
   return(c(ap_arm1, ap_arm2))
 }
 
+
+# Helper function to calculate Top 2 Thompson Sampling allocation probabilities.
+alloc_probs_T2TS <- function(alloc_probs_raw, beta) {
+  K = length(alloc_probs_raw)
+  pi_new = numeric(K)
+
+  for (k in seq_len(K)) {
+    # Term for all k' ≠ k
+    k_others = seq_len(K)[-k]
+    sum_term = sum((alloc_probs_raw[k] / (1 - alloc_probs_raw[k_others])) * alloc_probs_raw[k_others])
+
+    # apply formula
+    pi_new[k] = beta * alloc_probs_raw[k] + (1 - beta) * sum_term
+  }
+
+  # Normalize to ensure they sum to 1 (numerical stability)
+  pi_new = pi_new / sum(pi_new)
+
+  return(pi_new)
+}

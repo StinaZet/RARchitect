@@ -112,7 +112,7 @@
 #' @examples
 #' # Example 1: Simulate a Binary Outcome Trial
 #' set.seed(101)
-#' results_binary <- simulate_brar_trial(
+#' results_binary = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
 #' arms = 2, N = 100, blocksize = 10,
@@ -126,10 +126,10 @@
 #'
 #' # Example 2: Simulate a Normal Outcome Trial
 #' set.seed(102)
-#' model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
-#' prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
+#' model_params_norm = matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+#' prior_params_norm = matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 #'
-#' results_normal <- simulate_brar_trial(
+#' results_normal = simulate_brar_trial(
 #' outcome_type = "cont",
 #' distribution = "normal",
 #' arms = 2, N = 200, blocksize = 10, known_var = TRUE,
@@ -143,7 +143,7 @@
 #'
 #' # Example 3: Binary trial with tuning and clipping
 #' set.seed(103)
-#' results_binary_tuned <- simulate_brar_trial(
+#' results_binary_tuned = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
 #' arms = 2, N = 150, burnin = 15, blocksize = 15,
@@ -159,15 +159,15 @@
 #'
 #' # Example 4: Simulate a Normal Outcome Trial (unknown variance)
 #' set.seed(104)
-#' model_unvar <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+#' model_unvar = matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
 #' # priors: mu0=0, kappa=0.1, alpha=1, beta=1 for each arm
-#' prior_unvar <- matrix(c(0, 0,
+#' prior_unvar = matrix(c(0, 0,
 #'                         0.1, 0.1,
 #'                         1, 1,
 #'                         1, 1),
 #'                       nrow = 4, byrow = TRUE)
 #'
-#' results_normal_unvar <- simulate_brar_trial(
+#' results_normal_unvar = simulate_brar_trial(
 #'   outcome_type = "cont",
 #'   distribution = "normal",
 #'   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
@@ -183,10 +183,10 @@
 #' # Example 5: Simulate an Exponential Outcome Trial
 #' # True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
 #' set.seed(105)
-#' prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
-#' true_rates_exp <- c(0.2, 0.1)
+#' prior_params_exp = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
+#' true_rates_exp = c(0.2, 0.1)
 #'
-#' results_exponential <- simulate_brar_trial(
+#' results_exponential = simulate_brar_trial(
 #'   outcome_type = "cont",
 #'   distribution = "exponential",
 #'   arms = 2, N = 120, blocksize = 1,
@@ -302,7 +302,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     #}
 
-    results <- .simulate_brar_trial_binary(
+    results = .simulate_brar_trial_binary(
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
@@ -316,7 +316,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     #}
 
-    results <- .simulate_brar_trial_normal(
+    results = .simulate_brar_trial_normal(
       arms = arms, N = N, blocksize = blocksize, known_var = known_var,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
@@ -330,7 +330,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
     #}
 
-    results <- .simulate_brar_trial_exp(
+    results = .simulate_brar_trial_exp(
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
@@ -345,7 +345,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
 
   # --- Call simulate_trial_duration_poisson_recruitment ---
   # Construct block_sizes for duration simulation based on burnin and blocksize
-  remaining_N <- N - burnin
+  remaining_N = N - burnin
 
   if (remaining_N < 0) {
     stop("Burn-in period ('burnin') cannot be greater than total sample size ('N').")
@@ -356,19 +356,19 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   }
 
   if (N > 0) { # Only run duration simulation if N is positive
-    num_main_blocks <- remaining_N / blocksize
+    num_main_blocks = remaining_N / blocksize
 
     if (burnin > 0) {
       # The first 'burnin' participants are treated as one initial block
       # The remaining participants are grouped into blocks of 'blocksize'
-      block_sizes_for_duration_sim <- c(burnin, rep(blocksize, num_main_blocks))
+      block_sizes_for_duration_sim = c(burnin, rep(blocksize, num_main_blocks))
     } else {
       # If no burnin, all participants are in blocks of 'blocksize'
-      block_sizes_for_duration_sim <- rep(blocksize, N / blocksize)
+      block_sizes_for_duration_sim = rep(blocksize, N / blocksize)
     }
 
     # Call the duration simulation function with new parameter names
-    duration_results <- simulate_trial_duration_poisson_recruitment(
+    duration_results = simulate_trial_duration_poisson_recruitment(
       N = N,
       block_sizes = block_sizes_for_duration_sim,
       poisson_recruitment_rate_per_unit_time = recruitment_rate,
@@ -385,13 +385,13 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     # an empty data frame with appropriate columns, we ensure the duration columns are added.
     # If results is already a data.frame with the expected RAR trial columns but 0 rows:
     if (is.data.frame(results) && nrow(results) == 0) {
-      results$EstimatedRecruitmentTime <- numeric(0)
-      results$StdDevRecruitmentTime <- numeric(0)
-      results$EstimatedObservationTime <- numeric(0)
-      results$StdDevObservationTime <- numeric(0)
+      results$EstimatedRecruitmentTime = numeric(0)
+      results$StdDevRecruitmentTime = numeric(0)
+      results$EstimatedObservationTime = numeric(0)
+      results$StdDevObservationTime = numeric(0)
     } else {
       # Fallback for unexpected empty 'results' structure
-      results <- data.frame(
+      results = data.frame(
         Batch = numeric(0),
         Arm = numeric(0),
         Outcome = numeric(0),

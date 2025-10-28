@@ -19,7 +19,7 @@
 #' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
 #' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @keywords internal
-.simulate_brar_trial_exp = function(arms = 2, N, blocksize, priors, modelpar,
+.simulate_brar_trial_exp <- function(arms = 2, N, blocksize, priors, modelpar,
                                     tuning = 1, clipping = 0, burnin = 0,
                                     postprobmethod, randmethod = "coin",
                                     multiarm_method)
@@ -100,7 +100,7 @@
 
   # --- Main Simulation Loop (Block-wise) ---
   # Start from block 1 if no burn-in, otherwise from block 2
-  start_block_idx <- ifelse(burnin > 0 && burnin <= N, 2, 1) # Ensure we don't start at block 2 if burnin = N
+  start_block_idx = ifelse(burnin > 0 && burnin <= N, 2, 1) # Ensure we don't start at block 2 if burnin = N
   if (N == 0) start_block_idx = 1 # No blocks if N is 0
 
   for (i in start_block_idx:Nblocks) {
@@ -126,6 +126,40 @@
       stop("Internal Error: Invalid postprobmethod.")
     }
 
+    # Other methods for allocation probabilities if there are more than 2 arms.
+    if (arms > 2)
+    {
+      if (multiarm_method == "fixed")
+      {
+        if (alloc_probs_raw[1] >= 1 / arms)
+        {
+          # Don't change anything if the allocation probability to the control
+          # arm is larger than or equal to 1 / arms.
+          alloc_probs_raw = alloc_probs_raw
+        } else{
+          # The sum of the other probabilities
+          remaining_mass = 1 - 1 / arms
+
+          # Normalize the other arms (2:K) to sum to 1
+          other_probs = alloc_probs_raw[-1]
+          other_probs = other_probs / sum(other_probs)
+
+          # Rescale them to fit into the remaining mass
+          other_probs = other_probs * remaining_mass
+
+          # Replace in the original vector
+          alloc_probs_raw = c(1 / arms, other_probs)
+        }
+      } else if (multiarm_method == "top2"){
+        # The beta parameter for Top 2 Thompson Sampling.
+        top2beta = 0.5
+        alloc_probs_raw = alloc_probs_T2TS(alloc_probs_raw, top2beta)
+      } else {
+        # This case should be caught by main function validation
+        stop("Internal Error: Invalid multiarm_method.")
+      }
+    }
+
     # --- Apply tuning parameter (c) from Wathen & Thall (2017) ---
     if (tuning == 0) {
       alloc_probs_tuned = rep(1 / arms, arms)
@@ -140,14 +174,14 @@
     }
 
     # --- Apply clipping ---
-    current_clipping_value <- 0
+    current_clipping_value = 0
     if (is.numeric(clipping) && clipping > 0) {
-      current_clipping_value <- clipping
+      current_clipping_value = clipping
     } else if (is.character(clipping) && clipping == "adaptive") {
-      adaptive_batch_num <- i
-      current_clipping_value <- (1 / arms) * (adaptive_batch_num)^(-0.7)
-      current_clipping_value <- min(current_clipping_value, 1/arms)
-      current_clipping_value <- max(current_clipping_value, 1e-6)
+      adaptive_batch_num = i
+      current_clipping_value = (1 / arms) * (adaptive_batch_num)^(-0.7)
+      current_clipping_value = min(current_clipping_value, 1/arms)
+      current_clipping_value = max(current_clipping_value, 1e-6)
     }
 
     if (current_clipping_value > 0) {
