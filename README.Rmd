@@ -40,19 +40,55 @@ This is a basic example which shows you how to solve a common problem:
 ```{r example}
 library(RARchitect)
 # Simulate a Binary Outcome Trial
+# Example 1: Simulate a Binary Outcome Trial
 set.seed(101)
 results_binary <- simulate_brar_trial(
  outcome_type = "binary",
+ distribution = "bernoulli",
  arms = 2, N = 100, blocksize = 10,
  modelpar = c(0.6, 0.4),
  priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
- tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
- postprobmethod = "simulation",
+ tuning = 1, clipping = 0, burnin = 0, randmethod = "coin",
+ postprobmethod = "exact", # Or "simulation"
  recruitment_rate = 5,
- observation_delay = 30
-)
+ observation_delay = 30)
 head(results_binary)
-print(paste("Observed success rate Arm 1:", mean(results_binary$Outcome[results_binary$Arm == 1])))
+
+# Example 2: Simulate a Normal Outcome Trial
+set.seed(102)
+model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
+
+results_normal <- simulate_brar_trial(
+ outcome_type = "cont",
+ distribution = "normal",
+ arms = 2, N = 200, blocksize = 10, known_var = TRUE,
+ priors = prior_params_norm,
+ modelpar = model_params_norm,
+ tuning = 1, clipping = 0, burnin = 10, randmethod = "urn",
+ postprobmethod = "exact", # Or "simulation"
+ recruitment_rate = 10,
+ observation_delay = 15)
+head(results_normal)
+
+# Example 3: Simulate an Exponential Outcome Trial
+# True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
+set.seed(105)
+prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
+true_rates_exp <- c(0.2, 0.1)
+
+results_exponential <- simulate_brar_trial(
+ outcome_type = "cont",
+ distribution = "exponential",
+ arms = 2, N = 120, blocksize = 1,
+ priors = prior_params_exp,
+ modelpar = true_rates_exp,
+ tuning = 1, clipping = 0, burnin = 0,
+ randmethod = "coin",
+ postprobmethod = "simulation",
+ recruitment_rate = 6,
+ observation_delay = 5)
+head(results_exponential)
 ```
 
 
