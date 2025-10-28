@@ -19,7 +19,7 @@
 #' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
 #' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @keywords internal
-.simulate_brar_trial_binary <- function(arms = 2, N, blocksize, priors, modelpar,
+.simulate_brar_trial_binary <- function(direction, arms, N, blocksize, priors, modelpar,
                                        tuning = 1, clipping = 0, burnin = 0,
                                        postprobmethod, randmethod = "coin",
                                        multiarm_method)
@@ -113,11 +113,10 @@
     batch_number[current_block_indices] = i
 
     # Calculate the raw allocation probabilities for each arm
-    # Assumes posterior_bin_sim and posterior_bin_exact are available elsewhere in package
     if(postprobmethod == "simulation") {
-      alloc_probs_raw = posterior_bin_sim(alphas = current_alpha_params, betas = current_beta_params)
+      alloc_probs_raw = posterior_bin_sim(alphas = current_alpha_params, betas = current_beta_params, direction = direction)
     } else if(postprobmethod == "exact") {
-      alloc_probs_raw = posterior_bin_exact(alphas = current_alpha_params, betas = current_beta_params)
+      alloc_probs_raw = posterior_bin_exact(alphas = current_alpha_params, betas = current_beta_params, direction = direction)
     } else {
       # This case should be caught by main function validation
       stop("Internal Error: Invalid postprobmethod.")

@@ -14,6 +14,23 @@
 #' @param arms Numeric. Number of arms in the trial.
 #' @param N Numeric. Total sample size for the trial.
 #' @param blocksize Numeric. (Fixed) size of each block of participants for the adaptive randomization.
+#' @param direction Character. Specifies the direction of the desired treatment effect,
+#' `"lower"` if a reduction is desired (e.g. lower probability of a complication),
+#' or `"higher"` if an increase is desired (e.g. higher probability of survival).
+#' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
+#' data generating process. The first entries are for the control arm. The
+#' structure depends on `distribution`:
+#' \itemize{
+#' \item If `distribution = "bernoulli"`: A numeric vector with the true success
+#' probabilities for each Bernoulli arm. e.g., `c(0.6, 0.4)`.
+#' \item If `distribution = "normal"`: A 2-row matrix specifying the true parameters
+#' for each normal arm. Each column corresponds to an arm. Rows should be:
+#' 1. True mean for the arm.
+#' 2. True standard deviation for the arm.
+#' Example for two arms: `matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)`
+#' \item If `distribution = "exponential"`: A numeric vector with the rates for
+#' each exponential arm. e.g., `c(0.2, 0.1)`.
+#' }
 #' @param known_var Logical. Indicates if the variance for the `"normal"` outcome type
 #' is known (`TRUE`) or unknown (`FALSE`). Defaults to `FALSE`.
 #' @param priors Matrix. Defines the prior parameters for the Bayesian model of each arm.
@@ -43,21 +60,6 @@
 #' \item If `distribution = "exponential"`: A 2-row matrix where the first row contains the shape
 #' parameters and the second row contains the rate parameters for the Gamma
 #' distributions of each arm. The number of columns must match `arms`.
-#' }
-#' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
-#' data generating process. The first entries are for the control arm. The
-#' structure depends on `distribution`:
-#' \itemize{
-#' \item If `distribution = "bernoulli"`: A numeric vector with the true success
-#' probabilities for each Bernoulli arm. e.g., `c(0.6, 0.4)`.
-#' \item If `distribution = "normal"`: A 2-row matrix specifying the true parameters
-#' for each normal arm. Each column corresponds to an arm. Rows should be:
-#' 1. True mean for the arm.
-#' 2. True standard deviation for the arm. It is assumed to be
-#' the known population standard deviation for the purpose of posterior updates.
-#' Example for two arms: `matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)`
-#' \item If `distribution = "exponential"`: A numeric vector with the rates for
-#' each exponential arm. e.g., `c(0.2, 0.1)`.
 #' }
 #' @param tuning Numeric. A parameter (referred to as 'c' or 'gamma' in the
 #' Wathen and Thall, 2017 paper) that shrinks allocation probabilities
@@ -115,6 +117,7 @@
 #' results_binary = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
+#' direction = "higher",
 #' arms = 2, N = 100, blocksize = 10,
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
@@ -132,6 +135,7 @@
 #' results_normal = simulate_brar_trial(
 #' outcome_type = "cont",
 #' distribution = "normal",
+#' direction = "higher",
 #' arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
@@ -147,6 +151,7 @@
 #' results_binary_multiarm = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
+#' direction = "higher",
 #' arms = 3, N = 150, burnin = 15, blocksize = 15,
 #' priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' modelpar = c(0.5, 0.7, 0.8),
@@ -164,6 +169,7 @@
 #' results_binary_multiarm = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
+#' direction = "higher",
 #' arms = 3, N = 150, burnin = 15, blocksize = 15,
 #' priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' modelpar = c(0.5, 0.7, 0.8),
@@ -189,6 +195,7 @@
 #' results_normal_unvar = simulate_brar_trial(
 #'   outcome_type = "cont",
 #'   distribution = "normal",
+#'   direction = "higher",
 #'   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
 #'   priors = prior_unvar,
 #'   modelpar = model_unvar,
@@ -208,6 +215,7 @@
 #' results_exponential = simulate_brar_trial(
 #'   outcome_type = "cont",
 #'   distribution = "exponential",
+#'   direction = "higher",
 #'   arms = 2, N = 120, blocksize = 1,
 #'   priors = prior_params_exp,
 #'   modelpar = true_rates_exp,
@@ -220,9 +228,9 @@
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 distribution = c("bernoulli", "normal", "exponential"),
-                                arms, N, blocksize, known_var = FALSE,
-                                priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
-                                randmethod = "coin",
+                                arms, N, blocksize, direction = c("lower", "higher"),
+                                known_var = FALSE, priors, modelpar, tuning = 1,
+                                clipping = 0, burnin = 0, randmethod = "coin",
                                 postprobmethod = "simulation",
                                 multiarm_method = c("fixed", "top2"),
                                 recruitment_rate = 100000,
@@ -231,6 +239,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   # Input validation for outcome_type and distribution.
   outcome_type = match.arg(outcome_type)
   distribution = match.arg(distribution)
+  direction = match.arg(direction)
   multiarm_method = match.arg(multiarm_method)
 
   # Check combinations of outcome_type and distribution.
@@ -322,6 +331,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     #}
 
     results = .simulate_brar_trial_binary(
+      direction = direction,
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
@@ -330,12 +340,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       multiarm_method = multiarm_method
     )
   } else if (distribution == "normal") {
-
-    #if (postprobmethod == "simulation") {
-    #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
-    #}
-
     results = .simulate_brar_trial_normal(
+      direction = direction,
       arms = arms, N = N, blocksize = blocksize, known_var = known_var,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
@@ -344,12 +350,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       multiarm_method = multiarm_method
     )
   } else if (distribution == "exponential") {
-
-    #if (postprobmethod == "simulation") {
-    #  warning("You have chosen the method 'simulation' for calculating posterior probabilities. It is possible to calculate the posterior probabilities exactly for this type of outcome variable.")
-    #}
-
     results = .simulate_brar_trial_exp(
+      direction = direction,
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,

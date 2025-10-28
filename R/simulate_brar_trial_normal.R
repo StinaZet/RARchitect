@@ -18,7 +18,7 @@
 #' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
 #' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @keywords internal
-.simulate_brar_trial_normal <- function(arms = 2, N, blocksize, priors, modelpar,
+.simulate_brar_trial_normal <- function(direction, arms, N, blocksize, priors, modelpar,
                                         tuning = 1, clipping = 0, burnin = 0,
                                         postprobmethod, randmethod = "coin",
                                         multiarm_method,
@@ -182,9 +182,9 @@
     if (known_var) {
       post_sds = sqrt(current_tau2)
       if (postprobmethod == "simulation") {
-        alloc_probs_raw = posterior_norm_sim(current_mu, post_sds)
+        alloc_probs_raw = posterior_norm_sim(current_mu, post_sds, direction = direction)
       } else if(postprobmethod == "exact") {
-        alloc_probs_raw = posterior_norm_exact(current_mu, post_sds)
+        alloc_probs_raw = posterior_norm_exact(current_mu, post_sds, direction = direction)
       } else {
         # This case should be caught by main function validation
         stop("Internal Error: Invalid postprobmethod.")
@@ -194,7 +194,8 @@
         mu_n = current_mu,
         kappa_n = current_kappa,
         alpha_n = current_alpha,
-        beta_n = current_beta
+        beta_n = current_beta,
+        direction = direction
       )
     }
 

@@ -19,7 +19,7 @@
 #' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
 #' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @keywords internal
-.simulate_brar_trial_exp <- function(arms = 2, N, blocksize, priors, modelpar,
+.simulate_brar_trial_exp <- function(direction, arms, N, blocksize, priors, modelpar,
                                     tuning = 1, clipping = 0, burnin = 0,
                                     postprobmethod, randmethod = "coin",
                                     multiarm_method)
@@ -33,8 +33,8 @@
   if (!is.matrix(priors) || nrow(priors) != 2 || ncol(priors) != arms) {
     stop("'priors' must be a 2-row matrix with 'arms' columns (first row: alpha, second row: beta).")
   }
-  if (postprobmethod=="exact" && sum(priors%%1) != 0) {
-    stop("'priors' must be integer values when for exact computation of the posterior probabilities. Use postprobmethod == 'simulation' if you want to use non-integer values.")
+  if (postprobmethod == "exact" && any(priors[1, ] %% 1 != 0)) {
+    stop("'priors' must have integer shape parameters for exact computation of the posterior probabilities. Use postprobmethod == 'simulation' if you want to use non-integer values.")
   }
 
 
@@ -116,11 +116,10 @@
     batch_number[current_block_indices] = i
 
     # Calculate the raw allocation probabilities for each arm
-    # Assumes posterior_bin_sim and posterior_bin_exact are available elsewhere in package
     if(postprobmethod == "simulation") {
-      alloc_probs_raw = posterior_exp_sim(shapes = current_shape, rates = current_rate)
+      alloc_probs_raw = posterior_exp_sim(shapes = current_shape, rates = current_rate, direction = direction)
     } else if(postprobmethod == "exact") {
-      alloc_probs_raw = posterior_exp_exact(shapes = current_shape, rates = current_rate)
+      alloc_probs_raw = posterior_exp_exact(shapes = current_shape, rates = current_rate, direction = direction)
     } else {
       # This case should be caught by main function validation
       stop("Internal Error: Invalid postprobmethod.")
