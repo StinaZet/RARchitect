@@ -5,7 +5,8 @@
 \title{Simulate a Normal Response Adaptive Randomization (NRAR) Trial (Internal)}
 \usage{
 .simulate_brar_trial_normal(
-  arms = 2,
+  direction,
+  arms,
   N,
   blocksize,
   priors,

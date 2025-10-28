@@ -201,7 +201,7 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
     if (!is.numeric(modelpar) || length(modelpar) != arms) {
       stop("For 'bernoulli' distribution, 'modelpar' must be a numeric vector of length 'arms' containing success probabilities.")
     }
-    Outcome = rbinom(N, size = 1, prob = modelpar[Arm])
+    Outcome = stats::rbinom(N, size = 1, prob = modelpar[Arm])
 
   } else if (distribution == "normal") {
     if (!is.matrix(modelpar) || nrow(modelpar) != 2 || ncol(modelpar) != arms) {
@@ -209,13 +209,13 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
     }
     means = modelpar[1, ]
     sds = modelpar[2, ]
-    Outcome = rnorm(N, mean = means[Arm], sd = sds[Arm])
+    Outcome = stats::rnorm(N, mean = means[Arm], sd = sds[Arm])
 
   } else if (distribution == "exponential") {
     if (!is.numeric(modelpar) || length(modelpar) != arms) {
       stop("For 'exponential' distribution, 'modelpar' must be a numeric vector of length 'arms' containing rates.")
     }
-    Outcome = rexp(N, rate = modelpar[Arm])
+    Outcome = stats::rexp(N, rate = modelpar[Arm])
 
   } else {
     stop("Unsupported 'distribution'.")

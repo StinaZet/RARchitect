@@ -5,7 +5,8 @@
 \title{Simulate a Binary Response Adaptive Randomization (BRAR) Trial (Internal)}
 \usage{
 .simulate_brar_trial_binary(
-  arms = 2,
+  direction,
+  arms,
   N,
   blocksize,
   priors,

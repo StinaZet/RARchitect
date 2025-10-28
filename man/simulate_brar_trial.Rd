@@ -10,6 +10,7 @@ simulate_brar_trial(
   arms,
   N,
   blocksize,
+  direction = c("lower", "higher"),
   known_var = FALSE,
   priors,
   modelpar,
@@ -35,6 +36,10 @@ Must be either \code{"bernoulli"}, \code{"normal"}, or \code{"exponential"}.}
 \item{N}{Numeric. Total sample size for the trial.}
 
 \item{blocksize}{Numeric. (Fixed) size of each block of participants for the adaptive randomization.}
+
+\item{direction}{Character. Specifies the direction of the desired treatment effect,
+\code{"lower"} if a reduction is desired (e.g. lower probability of a complication),
+or \code{"higher"} if an increase is desired (e.g. higher probability of survival).}
 
 \item{known_var}{Logical. Indicates if the variance for the \code{"normal"} outcome type
 is known (\code{TRUE}) or unknown (\code{FALSE}). Defaults to \code{FALSE}.}
@@ -80,8 +85,7 @@ probabilities for each Bernoulli arm. e.g., \code{c(0.6, 0.4)}.
 for each normal arm. Each column corresponds to an arm. Rows should be:
 \enumerate{
 \item True mean for the arm.
-\item True standard deviation for the arm. It is assumed to be
-the known population standard deviation for the purpose of posterior updates.
+\item True standard deviation for the arm.
 Example for two arms: \code{matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)}
 \item If \code{distribution = "exponential"}: A numeric vector with the rates for
 each exponential arm. e.g., \code{c(0.2, 0.1)}.
@@ -158,6 +162,7 @@ set.seed(101)
 results_binary = simulate_brar_trial(
 outcome_type = "binary",
 distribution = "bernoulli",
+direction = "higher",
 arms = 2, N = 100, blocksize = 10,
 modelpar = c(0.6, 0.4),
 priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
@@ -175,6 +180,7 @@ prior_params_norm = matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 results_normal = simulate_brar_trial(
 outcome_type = "cont",
 distribution = "normal",
+direction = "higher",
 arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 priors = prior_params_norm,
 modelpar = model_params_norm,
@@ -190,6 +196,7 @@ set.seed(103)
 results_binary_multiarm = simulate_brar_trial(
 outcome_type = "binary",
 distribution = "bernoulli",
+direction = "higher",
 arms = 3, N = 150, burnin = 15, blocksize = 15,
 priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 modelpar = c(0.5, 0.7, 0.8),
@@ -207,6 +214,7 @@ set.seed(103)
 results_binary_multiarm = simulate_brar_trial(
 outcome_type = "binary",
 distribution = "bernoulli",
+direction = "higher",
 arms = 3, N = 150, burnin = 15, blocksize = 15,
 priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 modelpar = c(0.5, 0.7, 0.8),
@@ -232,6 +240,7 @@ prior_unvar = matrix(c(0, 0,
 results_normal_unvar = simulate_brar_trial(
   outcome_type = "cont",
   distribution = "normal",
+  direction = "higher",
   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
   priors = prior_unvar,
   modelpar = model_unvar,
@@ -251,6 +260,7 @@ true_rates_exp = c(0.2, 0.1)
 results_exponential = simulate_brar_trial(
   outcome_type = "cont",
   distribution = "exponential",
+  direction = "higher",
   arms = 2, N = 120, blocksize = 1,
   priors = prior_params_exp,
   modelpar = true_rates_exp,
