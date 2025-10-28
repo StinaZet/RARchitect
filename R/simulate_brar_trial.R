@@ -289,6 +289,10 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
   }
 
+  if (postprobmethod == "exact" && arms > 2))) {
+    stop("For arms > 2, 'postprobmethod' must be set to 'simulation'.")
+  }
+
   # Delegate to specific simulation functions based on outcome_type
   if (distribution == "bernoulli") {
     if (known_var == TRUE) {
