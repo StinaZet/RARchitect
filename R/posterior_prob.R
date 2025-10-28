@@ -1,18 +1,20 @@
 # Monte Carlo Estimate of Thompson Sampling/BRAR Arm 1 Allocation Probability
 # This helper function estimates the probability of selecting Arm 1 under TS
 # for a two-arm binary outcome case using Monte Carlo simulations.
-posterior_bin_sim = function(M = 10000, alphas, betas)
-{
-  # Simulate M samples from the posterior Beta distribution for Arm 1
-  arm1 = stats::rbeta(M, alphas[1], betas[1])
-  # Simulate M samples from the posterior Beta distribution for Arm 2
-  arm2 = stats::rbeta(M, alphas[2], betas[2])
+posterior_bin_sim <- function(M = 10000, alphas, betas) {
+  # Number of arms.
+  K = length(alphas)
 
-  # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
-  # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = mean(arm1 > arm2)
-  ap_arm2 = 1 - ap_arm1
-  return(c(ap_arm1, ap_arm2))
+  # Simulate M posterior samples for each arm.
+  # Create an M x K matrix where each column is rbeta(M, alpha_k, beta_k)
+  samples = replicate(K, stats::rbeta(M, alphas, betas))
+
+  # For each simulation (row), find which arm had the largest sampled value
+  best_arm = max.col(samples, ties.method = "random")
+
+  # Compute selection probability for each arm
+  ap = tabulate(best_arm, nbins = K) / M
+  return(ap)
 }
 
 # Calculate the Exact Posterior Probability of Superiority
@@ -45,18 +47,20 @@ posterior_bin_exact = function(alphas, betas)
 # This function calculates allocation probabilities by performing Monte Carlo
 # simulations from the posterior distributions of the means for each arm and
 # determining which arm's sampled mean is the highest.
-posterior_norm_sim = function(M = 10000, means, sds)
-{
-  arm1 = stats::rnorm(M, means[1], sds[1])
-  arm2 = stats::rnorm(M, means[2], sds[2])
+posterior_norm_sim <- function(M = 10000, means, sds) {
+  # Number of arms.
+  K = length(means)
 
-  # Calculate the proportion of times Arm 1's samples are greater than Arm 2's
-  # This proportion is the Monte Carlo estimate of the probability of selecting Arm 1.
-  ap_arm1 = mean(arm1 > arm2)
-  ap_arm2 = 1 - ap_arm1
-  return(c(ap_arm1, ap_arm2))
+  # Simulate M posterior samples for each arm
+  samples = replicate(K, stats::rnorm(M, means, sds))
+
+  # For each simulation (row), find which arm had the highest sampled value
+  best_arm = max.col(samples, ties.method = "random")
+
+  # Compute selection probability for each arm
+  ap = tabulate(best_arm, nbins = K) / M
+  return(ap)
 }
-
 
 # Helper function to estimate Thompson Sampling allocation probabilities for Normal outcomes
 # with known population variance (Normal-Normal conjugate model).
@@ -86,7 +90,7 @@ posterior_norm_unknownvar_sim <- function(M = 10000, mu_n, kappa_n, alpha_n, bet
   }
 
   # For each Monte Carlo draw, find which arm has the highest sampled mean
-  winners = max.col(samples, ties.method = "first")
+  winners = max.col(samples, ties.method = "random")
 
   # Compute allocation probabilities = frequency each arm is best
   ap = tabulate(winners, nbins = K) / M
@@ -100,11 +104,18 @@ posterior_norm_unknownvar_sim <- function(M = 10000, mu_n, kappa_n, alpha_n, bet
 # performing Monte Carlo simulations from the posterior distributions of the
 # means for each arm and determining which arm's sampled mean is the highest.
 posterior_exp_sim <- function(M = 10000, shapes, rates) {
-  arm1 <- stats::rgamma(M, shape = shapes[1], rate = rates[1])
-  arm2 <- stats::rgamma(M, shape = shapes[2], rate = rates[2])
-  ap_arm1 <- mean(arm1 > arm2)
-  ap_arm2 <- 1 - ap_arm1
-  return(c(ap_arm1, ap_arm2))
+  # Number of treatment arms.
+  K = length(shapes)
+
+  # Simulate M posterior samples for each arm
+  samples = replicate(K, stats::rgamma(M, shape = shapes, rate = rates))
+
+  # For each simulation (row), find which arm had the highest sampled value
+  best_arm = max.col(samples, ties.method = "random")
+
+  # Compute posterior selection probabilities
+  ap = tabulate(best_arm, nbins = K) / M
+  return(ap)
 }
 
 # Helper function to calculate Thompson Sampling allocation probabilities for
