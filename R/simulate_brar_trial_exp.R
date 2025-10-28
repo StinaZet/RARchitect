@@ -213,7 +213,7 @@
       {
         # Simulate the treatment and outcome
         treatment[iii] = 1 + stats::rbinom(1, 1, urnprob[iii])
-        outcome[iii] = stats::rexp(1, rate = modelpar[treatment[iii])
+        outcome[iii] = stats::rexp(1, rate = modelpar[treatment[iii]])
 
         # Update the allocation probabilities.
         term1 = max(alpha * alloc_probs_final[1] - sum(outcome) + (iii - 1) * alloc_probs_final[1], 0)
