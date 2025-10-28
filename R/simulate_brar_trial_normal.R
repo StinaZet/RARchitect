@@ -15,10 +15,13 @@
 #' @param burnin Numeric. Number of initial participants for burn-in.
 #' @param randmethod Character. The randomisation method when blocksize > 1 and
 #' arms = 2. Defaults to "coin".
+#' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
+#' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @keywords internal
 .simulate_brar_trial_normal <- function(arms = 2, N, blocksize, priors, modelpar,
                                         tuning = 1, clipping = 0, burnin = 0,
                                         postprobmethod, randmethod = "coin",
+                                        multiarm_method,
                                         known_var = FALSE)
 {
   # --- Input Validation and Setup ---
