@@ -79,9 +79,11 @@
 #' @param burnin Numeric. The number of initial participants allocated
 #' before standard block processing begins. These participants are treated
 #' as a single initial block, allocated using equal randomization. Defaults to 0.
-#' @param ensure_all_arms_sampled Logical. If TRUE, ensures that at least
-#' one participant is allocated to each arm within each block (if `blocksize >= arms`).
-#' This is useful for ensuring initial exploration. Defaults to FALSE.
+#' @param randmethod Character. Specifies the randomisation method for `blocksize > 1`
+#' and `arms=2`. Defaults to `"coin"`. Other options are `"urn"`, which is the mass-weighted
+#' urn-design from Zhao (2015), and `"block"`, which is the modified permuted
+#' block-design from Proper, Connett, and Murray (2021). For `arms>2`, `"coin"`
+#' is the only randomisation method.
 #' @param postprobmethod Character. (Applicable only when `outcome_type = "binary"`).
 #' Method for calculating posterior probabilities. Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.
 #' @param recruitment_rate Numeric. The rate parameter (lambda)
@@ -112,7 +114,7 @@
 #' arms = 2, N = 100, blocksize = 10,
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-#' tuning = 1, clipping = 0, burnin = 0, ensure_all_arms_sampled = FALSE,
+#' tuning = 1, clipping = 0, burnin = 0, randmetod = "coin",
 #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 5,
 #' observation_delay = 30)
@@ -129,7 +131,7 @@
 #' arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
-#' tuning = 1, clipping = 0, burnin = 10, ensure_all_arms_sampled = FALSE,
+#' tuning = 1, clipping = 0, burnin = 10, randmethod = "urn",
 #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 10,
 #' observation_delay = 15)
@@ -145,7 +147,7 @@
 #' modelpar = c(0.7, 0.5),
 #' tuning = 0.5,
 #' clipping = 0.05,
-#' ensure_all_arms_sampled = TRUE,
+#' randmethod = "block",
 #' postprobmethod = "exact",
 #' recruitment_rate = 8,
 #' observation_delay = 20)
@@ -168,7 +170,7 @@
 #'   priors = prior_unvar,
 #'   modelpar = model_unvar,
 #'   tuning = 1, clipping = 0, burnin = 20,
-#'   ensure_all_arms_sampled = FALSE,
+#'   randmethod = "coin",
 #'   postprobmethod = "simulation",
 #'   recruitment_rate = 12,
 #'   observation_delay = 10)
@@ -187,7 +189,7 @@
 #'   priors = prior_params_exp,
 #'   modelpar = true_rates_exp,
 #'   tuning = 1, clipping = 0, burnin = 0,
-#'   ensure_all_arms_sampled = FALSE,
+#'   randmethod = "coin",
 #'   postprobmethod = "simulation",
 #'   recruitment_rate = 6,
 #'   observation_delay = 5)
@@ -197,7 +199,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 distribution = c("bernoulli", "normal", "exponential")
                                 arms = 2, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
-                                ensure_all_arms_sampled = FALSE,
+                                randmethod = "coin",
                                 postprobmethod = "simulation",
                                 recruitment_rate = 100000,
                                 observation_delay = 0) {
@@ -212,6 +214,10 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   }
   if (outcome_type == "cont" && !(distribution %in% c("normal", "exponential"))) {
     stop("For outcome_type = 'cont', distribution must be 'normal' or 'exponential'.")
+  }
+
+  if (randmethod != "coin" || randmethod != "urn" || randmethod != "block") {
+    stop("The randomisation method must be 'coin', 'urn', or 'block'.")
   }
 
   # Validate common parameters
@@ -239,11 +245,11 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   if (burnin < 0 || !is.numeric(burnin) || burnin %% 1 != 0) {
     stop("The 'burnin' parameter must be a non-negative integer.")
   }
-  if (ensure_all_arms_sampled && blocksize < arms && blocksize > 0) {
-    stop("If 'ensure_all_arms_sampled' is TRUE, 'blocksize' must be at least 'arms' (or 0 if burnin covers initial).")
+  if (randmethod != "coin" && blocksize == 1) {
+    stop("If the number of experimental arms is larger than 1, only the coin randomisation method (randmethod = 'coin') is possible.")
   }
-  if (ensure_all_arms_sampled && blocksize == 1 && arms > 1) {
-    stop("You have a block size of 1 and more than one arm, but you asked to ensure each arm is sampled at least once in each block! This is impossible. Please change the block size or set 'ensure_all_arms_sampled = FALSE'.")
+  if (randmethod != "coin" && arms > 1) {
+    stop("If blocksize is equal to 1, only the coin randomisation method (randmethod = 'coin') is possible.")
   }
   # Validation for renamed parameters
   if (recruitment_rate <= 0 || !is.numeric(recruitment_rate)) {
@@ -273,7 +279,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      ensure_all_arms_sampled = ensure_all_arms_sampled,
+      randmethod = randmethod,
       postprobmethod = postprobmethod
     )
   } else if (distribution == "normal") {
@@ -286,7 +292,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize, known_var = known_var,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      ensure_all_arms_sampled = ensure_all_arms_sampled,
+      randmethod = randmethod,
       postprobmethod = postprobmethod
     )
   } else if (distribution == "exponential") {
@@ -299,7 +305,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      ensure_all_arms_sampled = ensure_all_arms_sampled,
+      randmethod = randmethod,
       postprobmethod = postprobmethod
     )
   } else {

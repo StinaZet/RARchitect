@@ -13,12 +13,13 @@
 #' @param tuning Numeric. Tuning parameter for allocation probabilities.
 #' @param clipping Numeric. Clipping parameter for allocation probabilities.
 #' @param burnin Numeric. Number of initial participants for burn-in.
-#' @param ensure_all_arms_sampled Logical. If TRUE, ensures at least one arm is sampled per block.
+#' @param randmethod Character. The randomisation method when blocksize > 1 and
+#' arms = 2. Defaults to "coin".
 #' @param postprobmethod Character. Method for calculating posterior probabilities ("simulation" or "exact").
 #' @keywords internal
 .simulate_brar_trial_binary = function(arms = 2, N, blocksize, priors, modelpar,
                                        tuning = 1, clipping = 0, burnin = 0,
-                                       postprobmethod, ensure_all_arms_sampled = FALSE)
+                                       postprobmethod, randmethod = "coin")
 {
   # --- Input Validation and Setup ---
   # Only specific validation relevant to this internal function.
@@ -162,29 +163,91 @@
 
     alloc_probs_final = round(alloc_probs_final, digits = 10)
 
-    # Store the allocation probabilities for the current block
-    allocation_probs_matrix[current_block_indices, ] = matrix(
-      rep(alloc_probs_final, each = current_block_size),
-      ncol = arms, byrow = FALSE
-    )
 
-    # Sample arms for the current block
-    selected_arm[current_block_indices] = sample(
-      1:arms, current_block_size, prob = alloc_probs_final, replace = TRUE
-    )
+    if(randmethod == "block")
+    {
+      # From Proper, Connett, and Murray (2021). https://journals.sagepub.com/doi/full/10.1177/17407745211010139
+      # Store the allocation probabilities for the current block. These are
+      # the same as what they would be with the coin design according to
+      # the original work.
+      allocation_probs_matrix[current_block_indices, ] = matrix(
+        rep(alloc_probs_final, each = current_block_size),
+        ncol = arms, byrow = FALSE
+      )
 
-    # --- Ensure All Arms are Sampled (Exploration Guarantee) ---
-    if (ensure_all_arms_sampled && length(unique(selected_arm[current_block_indices])) != arms && current_block_size >= arms) {
-      missing_arms = setdiff(1:arms, unique(selected_arm[current_block_indices]))
-      if (length(missing_arms) > 0 && length(missing_arms) <= current_block_size) {
-        selected_arm[sample(current_block_indices, length(missing_arms), replace = FALSE)] = missing_arms
+      # The target allocation ratio.
+      target = alloc_probs_final[1] * blocksize
+      # The floor, defined as target - 1 if target is an integer.
+      below = ifelse(target %% 1 == 0, target - 1, floor(target))
+      # The ceiling of target.
+      above = ceiling(target)
+
+      # Randomise if the floor or ceiling is used.
+      u = stats::rbinom(1, 1, (target - below))
+      e = u * above + (1 - u) * floor
+
+      # The number of patients on each arm.
+      arm_assignments = c(rep(1, times = e), rep(2, times = blocksize - e))
+
+      # Shuffle to avoid any ordering bias
+      selected_arm[current_block_indices] = sample(arm_assignments, blocksize)
+
+      # --- Simulate Rewards ---
+      rewards[current_block_indices] = stats::rbinom(
+        current_block_size, size = 1, prob = modelpar[selected_arm[current_block_indices]]
+      )
+
+    } else if(randmethod == "urn"){
+      # From Zhao (2015). https://www.sciencedirect.com/science/article/pii/S1551714415300264?via%3Dihub
+
+      # The first values of the probabilities are the usual probabilities.
+      urnprob = alloc_probs_final[1]
+
+      # The alpha value for the urn-design.
+      alpha = 3
+      for (iii in 1:blocksize)
+      {
+        # Simulate the treatment and outcome
+        treatment[iii] = 1 + stats::rbinom(1, 1, urnprob[iii])
+        outcome[iii] = stats::rbinom(1, 1, modelpar[treatment[iii])
+
+        # Update the allocation probabilities.
+        term1 = max(alpha * alloc_probs_final[1] - sum(outcome) + (iii - 1) * alloc_probs_final[1], 0)
+        term2 = max(alpha * (1 - alloc_probs_final[1]) - (length(outcome) - sum(outcome)) + (iii - 1) * (1 - alloc_probs_final[1]), 0)
+        urnprob[iii + 1] = term1 / (term1 + term2)
       }
+
+      # Save in the relevant matrices for output.
+      # Store the allocation probabilities for the current block
+      allocation_probs_matrix[current_block_indices, ] = matrix(
+        c(urnprob, (1 - urnprob)),
+        ncol = arms, byrow = FALSE
+      )
+
+      # The selected arms.
+      selected_arm[current_block_indices] = treatment
+
+      rewards[current_block_indices] = outcome
+
+    } else{
+
+      # Store the allocation probabilities for the current block
+      allocation_probs_matrix[current_block_indices, ] = matrix(
+        rep(alloc_probs_final, each = current_block_size),
+        ncol = arms, byrow = FALSE
+      )
+
+      # The selected arms.
+      selected_arm[current_block_indices] = sample(
+        1:arms, current_block_size, prob = alloc_probs_final, replace = TRUE
+      )
+
+      # --- Simulate Rewards ---
+      rewards[current_block_indices] = stats::rbinom(
+        current_block_size, size = 1, prob = modelpar[selected_arm[current_block_indices]]
+      )
     }
 
-    # --- Simulate Rewards ---
-    rewards[current_block_indices] = stats::rbinom(
-      current_block_size, size = 1, prob = modelpar[selected_arm[current_block_indices]]
-    )
 
     # --- Update Beta Priors for the Next Block ---
     if (i < Nblocks) {
