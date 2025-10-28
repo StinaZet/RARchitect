@@ -17,7 +17,8 @@
 #' @param known_var Logical. Indicates if the variance for the `"normal"` outcome type
 #' is known (`TRUE`) or unknown (`FALSE`). Defaults to `FALSE`.
 #' @param priors Matrix. Defines the prior parameters for the Bayesian model of each arm.
-#' The structure of this matrix depends on `outcome_type` and `known_var`:
+#' The first entries are for the control arm.
+#' The structure of this matrix depends on `distribution` and `known_var`:
 #' \itemize{
 #' \item If `distribution = "bernoulli"`: A 2-row matrix where the first row contains the alpha
 #' parameters and the second row contains the beta parameters for the Beta
@@ -44,7 +45,8 @@
 #' distributions of each arm. The number of columns must match `arms`.
 #' }
 #' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
-#' data generating process. The structure depends on `outcome_type`:
+#' data generating process. The first entries are for the control arm. The
+#' structure depends on `distribution`:
 #' \itemize{
 #' \item If `distribution = "bernoulli"`: A numeric vector with the true success
 #' probabilities for each Bernoulli arm. e.g., `c(0.6, 0.4)`.
@@ -62,7 +64,7 @@
 #' towards equal randomization.
 #' \itemize{
 #' \item If `tuning = 1`, no shrinking occurs; original adaptive randomization probabilities are used.
-#' \item As `tuning` approaches 0, probabilities shrink towards `1/arms` (equal randomization for `arms` arms).
+#' \item As `tuning` approaches 0, probabilities shrink towards `1/arms` (equal randomization for `arms`).
 #' \item A common value is 0.5. Defaults to 1.
 #' }
 #' @param clipping Character or Numeric. Forces a minimum and maximum probability
@@ -84,8 +86,10 @@
 #' urn-design from Zhao (2015) with alpha=3, and `"block"`, which is the modified permuted
 #' block-design from Proper, Connett, and Murray (2021). For `arms>2`, `"coin"`
 #' is the only randomisation method.
-#' @param postprobmethod Character. (Applicable only when `outcome_type = "binary"`).
-#' Method for calculating posterior probabilities. Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.
+#' @param postprobmethod Character. Method for calculating posterior probabilities.
+#' Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.
+#' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
+#' for Top 2 Thompson Sampling, or `"fixed"` for a fixed ratio to the control arm.
 #' @param recruitment_rate Numeric. The rate parameter (lambda)
 #' for the Poisson process that governs patient recruitment for trial duration simulation.
 #' This is the average number of patients arriving per unit of time (e.g., patients per month).
@@ -201,12 +205,14 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 randmethod = "coin",
                                 postprobmethod = "simulation",
+                                multiarm_method = c("fixed", "top2"),
                                 recruitment_rate = 100000,
                                 observation_delay = 0) {
 
   # Input validation for outcome_type and distribution.
   outcome_type = match.arg(outcome_type)
   distribution = match.arg(distribution)
+  multiarm_method = match.arg(multiarm_method)
 
   # Check combinations of outcome_type and distribution.
   if (outcome_type == "binary" && distribution != "bernoulli") {
@@ -218,6 +224,23 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
 
   if (randmethod != "coin" && randmethod != "urn" && randmethod != "block") {
     stop("The randomisation method must be 'coin', 'urn', or 'block'.")
+  }
+
+  if (arms > 2) {
+    # Require a valid multiarm_method
+    if (missing(multiarm_method)) {
+      stop("For arms > 2, you must specify 'multiarm_method' as either 'fixed' or 'top2'.")
+    } else {
+      # Validate user-specified method
+      if (!multiarm_method %in% c("fixed", "top2")) {
+        stop("Invalid 'multiarm_method'. Must be either 'fixed' or 'top2' when arms > 2.")
+      }
+    }
+  } else {
+    # arms == 2
+    if (!missing(multiarm_method)) {
+      warning("'multiarm_method' will be ignored when arms = 2.")
+    }
   }
 
   # Validate common parameters
