@@ -19,18 +19,18 @@
 #' @param priors Matrix. Defines the prior parameters for the Bayesian model of each arm.
 #' The structure of this matrix depends on `outcome_type` and `known_var`:
 #' \itemize{
-#' \item If `outcome_type = "binary"`: A 2-row matrix where the first row contains the alpha
+#' \item If `distribution = "bernoulli"`: A 2-row matrix where the first row contains the alpha
 #' parameters and the second row contains the beta parameters for the Beta
 #' distributions of each arm. The number of columns must match `arms`.
 #' e.g., `matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE)` for two arms with uniform Beta(1,1) priors.
-#' \item If `outcome_type = "normal"` and `known_var = TRUE`: A 2-row matrix
+#' \item If `distribution = "normal"` and `known_var = TRUE`: A 2-row matrix
 #' containing the Normal prior parameters for the mean of each arm . Each column
 #' corresponds to an arm. Rows should be:
 #' 1. Prior mean for the arm's mean.
 #' 2. Prior standard deviation of the arm's mean.
 #' Example for two arms with N(0,10) priors for means:
 #' `matrix(c(0, 0, 10, 10), nrow = 2, byrow = TRUE)`
-#' \item If `outcome_type = "normal"` and `known_var = FALSE`:  A 4-row matrix
+#' \item If `distribution = "normal"` and `known_var = FALSE`:  A 4-row matrix
 #' containing the prior parameters for the mean of each arm . Each column
 #' corresponds to an arm. Rows should be:
 #' 1. mu0: prior mean for the arm's mean.
@@ -39,7 +39,7 @@
 #' 4. beta: prior scale for the variance.
 #' Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
 #' `matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)`
-#' \item If `outcome_type = "exponential"`: A 2-row matrix where the first row contains the shape
+#' \item If `distribution = "exponential"`: A 2-row matrix where the first row contains the shape
 #' parameters and the second row contains the rate parameters for the Gamma
 #' distributions of each arm. The number of columns must match `arms`.
 #' }
