@@ -118,7 +118,7 @@
 #' arms = 2, N = 100, blocksize = 10,
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-#' tuning = 1, clipping = 0, burnin = 0, randmethod = "coin",
+#' tuning = 1, clipping = 0, burnin = 0, randmethod = "block",
 #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 5,
 #' observation_delay = 30)
@@ -141,21 +141,40 @@
 #' observation_delay = 15)
 #' head(results_normal)
 #'
-#' # Example 3: Binary trial with tuning and clipping
+#' # Example 3: Binary multiarm trial.
+#' # With multiarm_method = "fixed"
 #' set.seed(103)
-#' results_binary_tuned = simulate_brar_trial(
+#' results_binary_multiarm = simulate_brar_trial(
 #' outcome_type = "binary",
 #' distribution = "bernoulli",
-#' arms = 2, N = 150, burnin = 15, blocksize = 15,
-#' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-#' modelpar = c(0.7, 0.5),
-#' tuning = 0.5,
-#' clipping = 0.05,
-#' randmethod = "block",
-#' postprobmethod = "exact",
+#' arms = 3, N = 150, burnin = 15, blocksize = 15,
+#' priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+#' modelpar = c(0.5, 0.7, 0.8),
+#' tuning = 1,
+#' clipping = 0,
+#' randmethod = "coin",
+#' postprobmethod = "simulation",
+#' multiarm_method = "fixed",
 #' recruitment_rate = 8,
 #' observation_delay = 20)
-#' tail(results_binary_tuned)
+#' tail(results_binary_multiarm)
+#'
+#' # With multiarm_method = "top2"
+#' set.seed(103)
+#' results_binary_multiarm = simulate_brar_trial(
+#' outcome_type = "binary",
+#' distribution = "bernoulli",
+#' arms = 3, N = 150, burnin = 15, blocksize = 15,
+#' priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+#' modelpar = c(0.5, 0.7, 0.8),
+#' tuning = 1,
+#' clipping = 0,
+#' randmethod = "coin",
+#' postprobmethod = "simulation",
+#' multiarm_method = "top2",
+#' recruitment_rate = 8,
+#' observation_delay = 20)
+#' tail(results_binary_multiarm)
 #'
 #' # Example 4: Simulate a Normal Outcome Trial (unknown variance)
 #' set.seed(104)
@@ -201,7 +220,7 @@
 #'
 simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 distribution = c("bernoulli", "normal", "exponential"),
-                                arms = 2, N, blocksize, known_var = FALSE,
+                                arms, N, blocksize, known_var = FALSE,
                                 priors, modelpar, tuning = 1, clipping = 0, burnin = 0,
                                 randmethod = "coin",
                                 postprobmethod = "simulation",
@@ -289,7 +308,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     stop("Invalid 'postprobmethod'. Must be 'simulation' or 'exact'.")
   }
 
-  if (postprobmethod == "exact" && arms > 2))) {
+  if (postprobmethod == "exact" && arms > 2) {
     stop("For arms > 2, 'postprobmethod' must be set to 'simulation'.")
   }
 

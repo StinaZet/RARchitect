@@ -7,7 +7,7 @@
 simulate_brar_trial(
   outcome_type = c("binary", "cont"),
   distribution = c("bernoulli", "normal", "exponential"),
-  arms = 2,
+  arms,
   N,
   blocksize,
   known_var = FALSE,
@@ -18,6 +18,7 @@ simulate_brar_trial(
   burnin = 0,
   randmethod = "coin",
   postprobmethod = "simulation",
+  multiarm_method = c("fixed", "top2"),
   recruitment_rate = 1e+05,
   observation_delay = 0
 )
@@ -39,13 +40,14 @@ Must be either \code{"bernoulli"}, \code{"normal"}, or \code{"exponential"}.}
 is known (\code{TRUE}) or unknown (\code{FALSE}). Defaults to \code{FALSE}.}
 
 \item{priors}{Matrix. Defines the prior parameters for the Bayesian model of each arm.
-The structure of this matrix depends on \code{outcome_type} and \code{known_var}:
+The first entries are for the control arm.
+The structure of this matrix depends on \code{distribution} and \code{known_var}:
 \itemize{
-\item If \code{outcome_type = "binary"}: A 2-row matrix where the first row contains the alpha
+\item If \code{distribution = "bernoulli"}: A 2-row matrix where the first row contains the alpha
 parameters and the second row contains the beta parameters for the Beta
 distributions of each arm. The number of columns must match \code{arms}.
 e.g., \code{matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE)} for two arms with uniform Beta(1,1) priors.
-\item If \code{outcome_type = "normal"} and \code{known_var = TRUE}: A 2-row matrix
+\item If \code{distribution = "normal"} and \code{known_var = TRUE}: A 2-row matrix
 containing the Normal prior parameters for the mean of each arm . Each column
 corresponds to an arm. Rows should be:
 \enumerate{
@@ -53,7 +55,7 @@ corresponds to an arm. Rows should be:
 \item Prior standard deviation of the arm's mean.
 Example for two arms with N(0,10) priors for means:
 \code{matrix(c(0, 0, 10, 10), nrow = 2, byrow = TRUE)}
-\item If \code{outcome_type = "normal"} and \code{known_var = FALSE}:  A 4-row matrix
+\item If \code{distribution = "normal"} and \code{known_var = FALSE}:  A 4-row matrix
 containing the prior parameters for the mean of each arm . Each column
 corresponds to an arm. Rows should be:
 \item mu0: prior mean for the arm's mean.
@@ -62,14 +64,15 @@ corresponds to an arm. Rows should be:
 \item beta: prior scale for the variance.
 Example for two arms with mu0=0, kappa=0.1, alpha=1, beta=1:
 \code{matrix(c(0, 0, 0.1, 0.1, 1, 1, 1, 1), nrow = 4, byrow = TRUE)}
-\item If \code{outcome_type = "exponential"}: A 2-row matrix where the first row contains the shape
+\item If \code{distribution = "exponential"}: A 2-row matrix where the first row contains the shape
 parameters and the second row contains the rate parameters for the Gamma
 distributions of each arm. The number of columns must match \code{arms}.
 }
 }}
 
 \item{modelpar}{Matrix or Numeric vector. Specifies the true parameters for each arm's
-data generating process. The structure depends on \code{outcome_type}:
+data generating process. The first entries are for the control arm. The
+structure depends on \code{distribution}:
 \itemize{
 \item If \code{distribution = "bernoulli"}: A numeric vector with the true success
 probabilities for each Bernoulli arm. e.g., \code{c(0.6, 0.4)}.
@@ -90,7 +93,7 @@ Wathen and Thall, 2017 paper) that shrinks allocation probabilities
 towards equal randomization.
 \itemize{
 \item If \code{tuning = 1}, no shrinking occurs; original adaptive randomization probabilities are used.
-\item As \code{tuning} approaches 0, probabilities shrink towards \code{1/arms} (equal randomization for \code{arms} arms).
+\item As \code{tuning} approaches 0, probabilities shrink towards \code{1/arms} (equal randomization for \code{arms}).
 \item A common value is 0.5. Defaults to 1.
 }}
 
@@ -112,12 +115,15 @@ as a single initial block, allocated using equal randomization. Defaults to 0.}
 
 \item{randmethod}{Character. Specifies the randomisation method for \code{blocksize > 1}
 and \code{arms=2}. Defaults to \code{"coin"}. Other options are \code{"urn"}, which is the mass-weighted
-urn-design from Zhao (2015), and \code{"block"}, which is the modified permuted
+urn-design from Zhao (2015) with alpha=3, and \code{"block"}, which is the modified permuted
 block-design from Proper, Connett, and Murray (2021). For \code{arms>2}, \code{"coin"}
 is the only randomisation method.}
 
-\item{postprobmethod}{Character. (Applicable only when \code{outcome_type = "binary"}).
-Method for calculating posterior probabilities. Can be \code{"simulation"} or \code{"exact"}. Defaults to \code{"simulation"}.}
+\item{postprobmethod}{Character. Method for calculating posterior probabilities.
+Can be \code{"simulation"} or \code{"exact"}. Defaults to \code{"simulation"}.}
+
+\item{multiarm_method}{Character. Method for handling >2 arms. Either \code{"top2"}
+for Top 2 Thompson Sampling, or \code{"fixed"} for a fixed ratio to the control arm.}
 
 \item{recruitment_rate}{Numeric. The rate parameter (lambda)
 for the Poisson process that governs patient recruitment for trial duration simulation.
@@ -135,7 +141,7 @@ A data frame with \code{N} rows and the following columns:
 \item \verb{Outcome time}: The time point at which each participant's outcome is observed.
 \item \code{Arm}: The arm selected for the participant (1 to \code{arms}).
 \item \code{Outcome}: The outcome associated with the selected arm (binary 0/1 for "binary",
-continuous for "normal").
+continuous for "cont").
 \item \verb{AP arm X}: For each arm X, the allocation probability of Arm X for that block.
 }
 }
@@ -149,13 +155,13 @@ duration based on a Poisson recruitment process.
 \examples{
 # Example 1: Simulate a Binary Outcome Trial
 set.seed(101)
-results_binary <- simulate_brar_trial(
+results_binary = simulate_brar_trial(
 outcome_type = "binary",
 distribution = "bernoulli",
 arms = 2, N = 100, blocksize = 10,
 modelpar = c(0.6, 0.4),
 priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-tuning = 1, clipping = 0, burnin = 0, randmethod = "coin",
+tuning = 1, clipping = 0, burnin = 0, randmethod = "block",
 postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 5,
 observation_delay = 30)
@@ -163,10 +169,10 @@ head(results_binary)
 
 # Example 2: Simulate a Normal Outcome Trial
 set.seed(102)
-model_params_norm <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
-prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
+model_params_norm = matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+prior_params_norm = matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 
-results_normal <- simulate_brar_trial(
+results_normal = simulate_brar_trial(
 outcome_type = "cont",
 distribution = "normal",
 arms = 2, N = 200, blocksize = 10, known_var = TRUE,
@@ -178,33 +184,52 @@ recruitment_rate = 10,
 observation_delay = 15)
 head(results_normal)
 
-# Example 3: Binary trial with tuning and clipping
+# Example 3: Binary multiarm trial.
+# With multiarm_method = "fixed"
 set.seed(103)
-results_binary_tuned <- simulate_brar_trial(
+results_binary_multiarm = simulate_brar_trial(
 outcome_type = "binary",
 distribution = "bernoulli",
-arms = 2, N = 150, burnin = 15, blocksize = 15,
-priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
-modelpar = c(0.7, 0.5),
-tuning = 0.5,
-clipping = 0.05,
-randmethod = "block",
-postprobmethod = "exact",
+arms = 3, N = 150, burnin = 15, blocksize = 15,
+priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+modelpar = c(0.5, 0.7, 0.8),
+tuning = 1,
+clipping = 0,
+randmethod = "coin",
+postprobmethod = "simulation",
+multiarm_method = "fixed",
 recruitment_rate = 8,
 observation_delay = 20)
-tail(results_binary_tuned)
+tail(results_binary_multiarm)
+
+# With multiarm_method = "top2"
+set.seed(103)
+results_binary_multiarm = simulate_brar_trial(
+outcome_type = "binary",
+distribution = "bernoulli",
+arms = 3, N = 150, burnin = 15, blocksize = 15,
+priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+modelpar = c(0.5, 0.7, 0.8),
+tuning = 1,
+clipping = 0,
+randmethod = "coin",
+postprobmethod = "simulation",
+multiarm_method = "top2",
+recruitment_rate = 8,
+observation_delay = 20)
+tail(results_binary_multiarm)
 
 # Example 4: Simulate a Normal Outcome Trial (unknown variance)
 set.seed(104)
-model_unvar <- matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
+model_unvar = matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)
 # priors: mu0=0, kappa=0.1, alpha=1, beta=1 for each arm
-prior_unvar <- matrix(c(0, 0,
+prior_unvar = matrix(c(0, 0,
                         0.1, 0.1,
                         1, 1,
                         1, 1),
                       nrow = 4, byrow = TRUE)
 
-results_normal_unvar <- simulate_brar_trial(
+results_normal_unvar = simulate_brar_trial(
   outcome_type = "cont",
   distribution = "normal",
   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
@@ -220,10 +245,10 @@ head(results_normal_unvar)
 # Example 5: Simulate an Exponential Outcome Trial
 # True rates for arms: lambda1 = 0.2 (mean = 5), lambda2 = 0.1 (mean = 10)
 set.seed(105)
-prior_params_exp <- matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
-true_rates_exp <- c(0.2, 0.1)
+prior_params_exp = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE) # Gamma(1,1) priors
+true_rates_exp = c(0.2, 0.1)
 
-results_exponential <- simulate_brar_trial(
+results_exponential = simulate_brar_trial(
   outcome_type = "cont",
   distribution = "exponential",
   arms = 2, N = 120, blocksize = 1,

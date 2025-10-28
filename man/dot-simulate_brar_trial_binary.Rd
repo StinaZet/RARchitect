@@ -14,7 +14,8 @@
   clipping = 0,
   burnin = 0,
   postprobmethod,
-  randmethod = "coin"
+  randmethod = "coin",
+  multiarm_method
 )
 }
 \arguments{
@@ -39,6 +40,9 @@ and the second row contains beta parameters for the Beta distributions of each a
 
 \item{randmethod}{Character. The randomisation method when blocksize > 1 and
 arms = 2. Defaults to "coin".}
+
+\item{multiarm_method}{Character. Method for handling >2 arms. Either \code{"top2"}
+for Top 2 Thompson Sampling, or \code{"fixed"} for a fixed ratio to the control arm.}
 }
 \description{
 This is an internal helper function for \code{simulate_brar_trial}. It simulates a
