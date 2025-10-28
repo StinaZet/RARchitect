@@ -100,7 +100,7 @@
 #' \item `Outcome time`: The time point at which each participant's outcome is observed.
 #' \item `Arm`: The arm selected for the participant (1 to `arms`).
 #' \item `Outcome`: The outcome associated with the selected arm (binary 0/1 for "binary",
-#' continuous for "normal").
+#' continuous for "cont").
 #' \item `AP arm X`: For each arm X, the allocation probability of Arm X for that block.
 #' }
 #' @export
