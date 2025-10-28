@@ -8,7 +8,9 @@
 #' duration based on a Poisson recruitment process.
 #'
 #' @param outcome_type Character. Specifies the type of outcome to simulate.
-#' Must be either `"binary"`, `"normal"`, or `"exponential"`.
+#' Must be either `"binary"` or `"cont"`.
+#' @param distribution Character. Specifies the distribution of the outcome.
+#' Must be either `"bernoulli"`, `"normal"`, or `"exponential"`.
 #' @param arms Numeric. Number of arms in the trial.
 #' @param N Numeric. Total sample size for the trial.
 #' @param blocksize Numeric. (Fixed) size of each block of participants for the adaptive randomization.
@@ -44,15 +46,15 @@
 #' @param modelpar Matrix or Numeric vector. Specifies the true parameters for each arm's
 #' data generating process. The structure depends on `outcome_type`:
 #' \itemize{
-#' \item If `outcome_type = "binary"`: A numeric vector with the true success
+#' \item If `distribution = "bernoulli"`: A numeric vector with the true success
 #' probabilities for each Bernoulli arm. e.g., `c(0.6, 0.4)`.
-#' \item If `outcome_type = "normal"`: A 2-row matrix specifying the true parameters
+#' \item If `distribution = "normal"`: A 2-row matrix specifying the true parameters
 #' for each normal arm. Each column corresponds to an arm. Rows should be:
 #' 1. True mean for the arm.
 #' 2. True standard deviation for the arm. It is assumed to be
 #' the known population standard deviation for the purpose of posterior updates.
 #' Example for two arms: `matrix(c(10, 8, 2, 2), nrow = 2, byrow = TRUE)`
-#' \item If `outcome_type = "exponential"`: A numeric vector with the rates for
+#' \item If `distribution = "exponential"`: A numeric vector with the rates for
 #' each exponential arm. e.g., `c(0.2, 0.1)`.
 #' }
 #' @param tuning Numeric. A parameter (referred to as 'c' or 'gamma' in the
@@ -106,6 +108,7 @@
 #' set.seed(101)
 #' results_binary <- simulate_brar_trial(
 #' outcome_type = "binary",
+#' distribution = "bernoulli",
 #' arms = 2, N = 100, blocksize = 10,
 #' modelpar = c(0.6, 0.4),
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
@@ -121,7 +124,8 @@
 #' prior_params_norm <- matrix(c(0, 0, 1, 1), nrow = 2, byrow = TRUE)
 #'
 #' results_normal <- simulate_brar_trial(
-#' outcome_type = "normal",
+#' outcome_type = "cont",
+#' distribution = "normal",
 #' arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
@@ -135,6 +139,7 @@
 #' set.seed(103)
 #' results_binary_tuned <- simulate_brar_trial(
 #' outcome_type = "binary",
+#' distribution = "bernoulli",
 #' arms = 2, N = 150, burnin = 15, blocksize = 15,
 #' priors = matrix(c(1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #' modelpar = c(0.7, 0.5),
@@ -157,7 +162,8 @@
 #'                       nrow = 4, byrow = TRUE)
 #'
 #' results_normal_unvar <- simulate_brar_trial(
-#'   outcome_type = "normal",
+#'   outcome_type = "cont",
+#'   distribution = "normal",
 #'   arms = 2, N = 200, blocksize = 20, known_var = FALSE,
 #'   priors = prior_unvar,
 #'   modelpar = model_unvar,
@@ -175,7 +181,8 @@
 #' true_rates_exp <- c(0.2, 0.1)
 #'
 #' results_exponential <- simulate_brar_trial(
-#'   outcome_type = "exponential",
+#'   outcome_type = "cont",
+#'   distribution = "exponential",
 #'   arms = 2, N = 120, blocksize = 1,
 #'   priors = prior_params_exp,
 #'   modelpar = true_rates_exp,
