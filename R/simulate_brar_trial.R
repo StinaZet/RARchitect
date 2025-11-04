@@ -85,9 +85,10 @@
 #' as a single initial block, allocated using equal randomization. Defaults to 0.
 #' @param randmethod Character. Specifies the randomisation method for `blocksize > 1`
 #' and `arms=2`. Defaults to `"coin"`. Other options are `"urn"`, which is the mass-weighted
-#' urn-design from Zhao (2015) with alpha=3, and `"block"`, which is the modified permuted
-#' block-design from Proper, Connett, and Murray (2021). For `arms>2`, `"coin"`
-#' is the only randomisation method.
+#' urn-design from Zhao (2015), and `"block"`, which is the modified permuted
+#' block-design from Proper, Connett, and Murray (2021).
+#' @param urn_alpha Numeric. The mass parameter ($\alpha$) for the Zhao (2015) urn-design,
+#' used when `randmethod = "urn"`.
 #' @param postprobmethod Character. Method for calculating posterior probabilities.
 #' Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.
 #' @param multiarm_method Character. Method for handling >2 arms. Either `"top2"`
@@ -140,6 +141,7 @@
 #' priors = prior_params_norm,
 #' modelpar = model_params_norm,
 #' tuning = 1, clipping = 0, burnin = 10, randmethod = "urn",
+#' urn_alpha = 3,
 #' postprobmethod = "exact", # Or "simulation"
 #' recruitment_rate = 10,
 #' observation_delay = 15)
@@ -231,7 +233,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 arms, N, blocksize, direction = c("lower", "higher"),
                                 known_var = FALSE, priors, modelpar, tuning = 1,
                                 clipping = 0, burnin = 0, randmethod = "coin",
-                                postprobmethod = "simulation",
+                                urn_alpha = NULL, postprobmethod = "simulation",
                                 multiarm_method = c("fixed", "top2"),
                                 recruitment_rate = 100000,
                                 observation_delay = 0) {
@@ -296,12 +298,6 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   if (burnin < 0 || !is.numeric(burnin) || burnin %% 1 != 0) {
     stop("The 'burnin' parameter must be a non-negative integer.")
   }
-  if (randmethod != "coin" && arms > 2) {
-    stop("If the number of arms is larger than 2, only the coin randomisation method (randmethod = 'coin') is possible.")
-  }
-  if (randmethod != "coin" && blocksize == 1) {
-    stop("If blocksize is equal to 1, only the coin randomisation method (randmethod = 'coin') is possible.")
-  }
   # Validation for renamed parameters
   if (recruitment_rate <= 0 || !is.numeric(recruitment_rate)) {
     stop("Parameter 'recruitment_rate' must be a positive number for the trial duration simulation (as it represents a Poisson rate).")
@@ -321,6 +317,18 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
     stop("For arms > 2, 'postprobmethod' must be set to 'simulation'.")
   }
 
+  if (randmethod == "urn" && (urn_alpha <= 0 || !is.numeric(urn_alpha))) {
+    stop("The 'urn_alpha' parameter must be a positive numeric value when randmethod='urn'.")
+  }
+
+  if (randmethod == "coin" && blocksize > 1) {
+    warning("You have chosen the randomisation method 'coin' with a block size bigger than 1. This is not usually used in practice, consider using another randomisation method.")
+  }
+  if (randmethod != "coin" && blocksize == 1) {
+    warning("If blocksize is equal to 1, only the coin randomisation method (randmethod = 'coin') is possible. Deafaults to randmethod = 'coin'.")
+    randmethod = "coin"
+  }
+
   # Delegate to specific simulation functions based on outcome_type
   if (distribution == "bernoulli") {
     if (known_var == TRUE) {
@@ -335,7 +343,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      randmethod = randmethod,
+      randmethod = randmethod, urn_alpha = urn_alpha,
       postprobmethod = postprobmethod,
       multiarm_method = multiarm_method
     )
@@ -345,7 +353,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize, known_var = known_var,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      randmethod = randmethod,
+      randmethod = randmethod, urn_alpha = urn_alpha,
       postprobmethod = postprobmethod,
       multiarm_method = multiarm_method
     )
@@ -355,7 +363,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       arms = arms, N = N, blocksize = blocksize,
       priors = priors, modelpar = modelpar, tuning = tuning,
       clipping = clipping, burnin = burnin,
-      randmethod = randmethod,
+      randmethod = randmethod, urn_alpha = urn_alpha,
       postprobmethod = postprobmethod,
       multiarm_method = multiarm_method
     )

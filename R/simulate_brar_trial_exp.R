@@ -22,7 +22,7 @@
 .simulate_brar_trial_exp <- function(direction, arms, N, blocksize, priors, modelpar,
                                     tuning = 1, clipping = 0, burnin = 0,
                                     postprobmethod, randmethod = "coin",
-                                    multiarm_method)
+                                    urn_alpha, multiarm_method)
 {
   # --- Input Validation and Setup ---
   # Only specific validation relevant to this internal function.
@@ -203,76 +203,93 @@
     alloc_probs_final = round(alloc_probs_final, digits = 10)
 
 
-
+    # --- Randomization Method (Block-wise Assignment) ---
     if(randmethod == "block")
     {
-      # From Proper, Connett, and Murray (2021). https://journals.sagepub.com/doi/full/10.1177/17407745211010139
-      # Store the allocation probabilities for the current block. These are
-      # the same as what they would be with the coin design according to
-      # the original work.
+      # https://journals.sagepub.com/doi/full/10.1177/17407745211010139
+      # Multi-Arm Block Randomization (BAR compliant: Fixed counts for the block)
+
+      # Store the allocation probabilities for the current block.
       allocation_probs_matrix[current_block_indices, ] = matrix(
         rep(alloc_probs_final, each = current_block_size),
         ncol = arms, byrow = FALSE
       )
 
-      # The target allocation ratio.
-      target = alloc_probs_final[1] * blocksize
-      # The floor, defined as target - 1 if target is an integer.
-      below = ifelse(target %% 1 == 0, target - 1, floor(target))
-      # The ceiling of target.
-      above = ceiling(target)
+      # --- 1. Calculate integer assignment counts for all K arms (Quota Sampling) ---
+      raw_counts = alloc_probs_final * current_block_size
+      base_counts = floor(raw_counts)
+      remainder = current_block_size - sum(base_counts)
 
-      # Randomise if the floor or ceiling is used.
-      u = stats::rbinom(1, 1, (target - below))
-      e = u * above + (1 - u) * below
+      fractional_parts = raw_counts - base_counts
 
-      # The number of patients on each arm.
-      arm_assignments = c(rep(1, times = e), rep(2, times = blocksize - e))
+      if (remainder > 0) {
+        if (all(fractional_parts == 0)) fractional_parts = rep(1/arms, arms)
 
-      # Shuffle to avoid any ordering bias
-      selected_arm[current_block_indices] = sample(arm_assignments, blocksize)
-
-      # --- Simulate Rewards ---
-      rewards[current_block_indices] = stats::rexp(
-        current_block_size, rate = modelpar[selected_arm[current_block_indices]]
-      )
-
-    } else if(randmethod == "urn"){
-      # From Zhao (2015). https://www.sciencedirect.com/science/article/pii/S1551714415300264?via%3Dihub
-
-      # The first values of the probabilities are the usual probabilities.
-      urnprob = alloc_probs_final[1]
-
-      treatment = c()
-      outcome = c()
-
-      # The alpha value for the urn-design.
-      alpha = 3
-      for (iii in 1:blocksize)
-      {
-        # Simulate the treatment and outcome
-        treatment[iii] = 1 + stats::rbinom(1, 1, urnprob[iii])
-        outcome[iii] = stats::rexp(1, rate = modelpar[treatment[iii]])
-
-        # Update the allocation probabilities.
-        term1 = max(alpha * alloc_probs_final[1] - sum(outcome) + (iii - 1) * alloc_probs_final[1], 0)
-        term2 = max(alpha * (1 - alloc_probs_final[1]) - (length(outcome) - sum(outcome)) + (iii - 1) * (1 - alloc_probs_final[1]), 0)
-        urnprob[iii + 1] = term1 / (term1 + term2)
+        # Distribute the 'remainder' slots probabilistically
+        add_indices = sample(1:arms, size = remainder, prob = fractional_parts, replace = FALSE)
+        add_tab = tabulate(add_indices, nbins = arms)
+        counts_final = base_counts + add_tab
+      } else {
+        counts_final = base_counts
       }
 
-      # Save in the relevant matrices for output.
-      # Store the allocation probabilities for the current block
-      allocation_probs_matrix[current_block_indices, ] = matrix(
-        c(urnprob[1:blocksize], (1 - urnprob[1:blocksize])),
-        ncol = arms, byrow = FALSE
-      )
+      # --- 2. Construct the assignment vector and shuffle ---
+      arm_assignments = rep(1:arms, times = counts_final)
 
-      # The selected arms.
-      selected_arm[current_block_indices] = treatment
+      # Shuffle assignments within block to prevent predictability
+      selected_arm[current_block_indices] = sample(arm_assignments, size = current_block_size, replace = FALSE)
 
-      rewards[current_block_indices] = outcome
+    } else if(randmethod == "urn"){
+      # Multi-Arm Design-Adaptive Urn Randomization (DAR - Outcome-Blind, Zhao 2015 generalized)
+      # https://www.sciencedirect.com/science/article/pii/S1551714415300264?via%3Dihub
 
-    } else{
+      # Urn Mass parameter (alpha).
+      alpha_urn = urn_alpha
+
+      # Target probabilities for the block (pi_k)
+      target_probs = alloc_probs_final
+
+      # Tracking: N_k(i-1) - number of patients *assigned* to each arm in the block so far.
+      count_in_block = rep(0L, arms)
+
+      selected_arm_block = numeric(current_block_size)
+      rewards_block = numeric(current_block_size)
+
+      probs_per_draw = matrix(NA, nrow = current_block_size, ncol = arms)
+
+      # --- Patient-by-Patient Urn Process within the block ---
+      for (iii in 1:current_block_size)
+      {
+        # 1. Calculate Urn Weights W_k(i) based on Zhao (2015) Eq 7a:
+        # W_k(i) = max(alpha * pi_k + (i-1) * pi_k - N_k(i-1), 1)
+
+        term1 = alpha_urn * target_probs + (iii - 1) * target_probs
+        weights = pmax(term1 - count_in_block, 1)
+
+        # 2. Calculate current allocation probabilities
+        probs_now = weights / sum(weights)
+        probs_per_draw[iii, ] = probs_now
+
+        # 3. Draw arm
+        draw = sample(1:arms, size = 1, prob = probs_now)
+        selected_arm_block[iii] = draw
+
+        # 4. Simulate the outcome
+        # The outcome is NOT used to update the assignment probability for the next draw.
+        outcome = stats::rexp(1, rate = modelpar[draw])
+        rewards_block[iii] = outcome
+
+        # 5. Update assignment counts (N_k) for the next patient (i+1)
+        count_in_block[draw] = count_in_block[draw] + 1L
+      }
+
+      # --- 6. Save results ---
+      allocation_probs_matrix[current_block_indices, ] = probs_per_draw
+      selected_arm[current_block_indices] = selected_arm_block
+      rewards[current_block_indices] = rewards_block
+
+    } else { # Includes randmethod == "coin"
+      # Coin Randomization (BAR compliant: Simple random sampling/Multinomial)
 
       # Store the allocation probabilities for the current block
       allocation_probs_matrix[current_block_indices, ] = matrix(
@@ -284,8 +301,10 @@
       selected_arm[current_block_indices] = sample(
         1:arms, current_block_size, prob = alloc_probs_final, replace = TRUE
       )
+    }
 
-      # --- Simulate Rewards ---
+    # --- Simulate Rewards (Only needed for "block" and "coin" as "urn" already simulated them) ---
+    if (randmethod != "urn") {
       rewards[current_block_indices] = stats::rexp(
         current_block_size, rate = modelpar[selected_arm[current_block_indices]]
       )
