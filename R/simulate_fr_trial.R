@@ -15,8 +15,10 @@
 #' @param N Integer. Total sample size.
 #' @param direction Character. `"lower"` or `"higher"`.
 #' @param known_var Logical. If `TRUE` treat normal variance as known (only applies to `distribution="normal"`).
-#' @param modelpar Numeric vector or matrix. True data-generating parameters (see \code{simulate_brar_trial} documentation).
-#' @param allocation_probs Numeric vector of length `arms`. Fixed allocation probabilities (will be normalized). Defaults to equal allocation.
+#' @param modelpar Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see \code{simulate_brar_trial} documentation).
+#' @param allocation_probs Numeric vector of length `arms` or character string. Fixed allocation probabilities (will be normalized).
+#'   Defaults to equal allocation. If set to the string \code{"dunnett"} (and \code{arms >= 2}), the probabilities are
+#'   set proportional to $\sqrt{k}:1:\dots:1$, where $k = arms-1$ is the number of active arms (Arm 1 is control).
 #' @param randmethod Character. Randomisation method: `"coin"` (default), `"block"`, or `"urn"`.
 #' @param blocksize Integer. Block size for `"block"` randomisation. Ignored for `"coin"` and `"urn"`.
 #' @param urn_alpha Numeric. Initial urn mass parameter for `"urn"` (controls initial ball counts). Default 3.
@@ -40,8 +42,7 @@
 #'   outcome_type = "binary", distribution = "bernoulli",
 #'   arms = 2, N = 100, modelpar = c(0.6, 0.4),
 #'   allocation_probs = c(0.5, 0.5),
-#'   randmethod = "coin", recruitment_rate = 5, observation_delay = 10
-#' )
+#'   randmethod = "coin", recruitment_rate = 5, observation_delay = 10)
 #'
 #' set.seed(302)
 #' simulate_fr_trial(
@@ -50,17 +51,16 @@
 #'   modelpar = matrix(c(10, 8, 6, 2, 2, 2), nrow = 2, byrow = TRUE),
 #'   allocation_probs = c(0.5, 0.3, 0.2),
 #'   randmethod = "block", blocksize = 10,
-#'   recruitment_rate = 10, observation_delay = 5
-#' )
+#'   recruitment_rate = 10, observation_delay = 5)
 #'
 #' set.seed(303)
 #' simulate_fr_trial(
-#'   outcome_type = "binary", distribution = "bernoulli",
-#'   arms = 3, N = 120, modelpar = c(0.3, 0.5, 0.7),
-#'   allocation_probs = c(0.4, 0.4, 0.2),
-#'   randmethod = "urn", urn_alpha = 5,
-#'   recruitment_rate = 8, observation_delay = 2
-#' )
+#'  outcome_type = "binary", distribution = "bernoulli",
+#'  arms = 3, N = 120, modelpar = c(0.3, 0.5, 0.7),
+#'  allocation_probs = "dunnett", # <-- NEW EXAMPLE
+#'  randmethod = "urn", urn_alpha = 5,
+#'  recruitment_rate = 8, observation_delay = 2)
+#'
 simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
                               distribution = c("bernoulli", "normal", "exponential"),
                               arms, N, direction = c("lower", "higher"),
@@ -105,14 +105,28 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
 
   # Normalize or set allocation probabilities
   if (is.null(allocation_probs)) {
+    # Default to equal allocation if NULL
     allocation_probs = rep(1 / arms, arms)
-  } else {
-    if (!is.numeric(allocation_probs) || length(allocation_probs) != arms) {
+  } else if (is.character(allocation_probs) && allocation_probs == "dunnett") {
+    # Implement Dunnett's square root rule
+    if (arms < 2) stop("Dunnett allocation requires at least two arms (control + 1 active).")
+    # Number of active arms
+    n_active = arms - 1
+    # Allocation for control arm 1 is sqrt(n_active), active arms are 1.
+    raw_probs = c(sqrt(n_active), rep(1, n_active))
+    # Normalize
+    allocation_probs = raw_probs / sum(raw_probs)
+
+  } else if (is.numeric(allocation_probs)) {
+    # Handle custom numeric vector input.
+    if (length(allocation_probs) != arms) {
       stop("'allocation_probs' must be a numeric vector with length equal to 'arms'.")
     }
     if (any(allocation_probs < 0)) stop("'allocation_probs' must be non-negative.")
     if (sum(allocation_probs) == 0) stop("'allocation_probs' must sum to a positive number.")
     allocation_probs = allocation_probs / sum(allocation_probs)
+  } else {
+    stop("'allocation_probs' must be NULL, the string \"dunnett\", or a numeric vector of length 'arms'.")
   }
 
   # --- Handle blocksize requirements ---
