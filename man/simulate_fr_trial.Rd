@@ -15,7 +15,7 @@ simulate_fr_trial(
   allocation_probs = NULL,
   randmethod = c("coin", "block", "urn"),
   blocksize,
-  urn_alpha = 3,
+  urn_alpha = NULL,
   recruitment_rate = 1e+05,
   observation_delay = 0
 )
@@ -36,14 +36,14 @@ simulate_fr_trial(
 \item{modelpar}{Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see \code{simulate_brar_trial} documentation).}
 
 \item{allocation_probs}{Numeric vector of length \code{arms} or character string. Fixed allocation probabilities (will be normalized).
-Defaults to equal allocation. If set to the string \code{"dunnett"} (and \code{arms >= 2}), the probabilities are
-set proportional to $\sqrt{k}:1:\dots:1$, where $k = arms-1$ is the number of active arms (Arm 1 is control).}
+Defaults to equal allocation. If set to the string \code{"dunnett"}, the probabilities are
+set proportional to sqrt(k):1:...:1, where k = arms-1 is the number of active arms (Arm 1 is control).}
 
 \item{randmethod}{Character. Randomisation method: \code{"coin"} (default), \code{"block"}, or \code{"urn"}.}
 
 \item{blocksize}{Integer. Block size for \code{"block"} randomisation. Ignored for \code{"coin"} and \code{"urn"}.}
 
-\item{urn_alpha}{Numeric. Initial urn mass parameter for \code{"urn"} (controls initial ball counts). Default 3.}
+\item{urn_alpha}{Numeric. Initial urn mass parameter for \code{"urn"} (controls initial ball counts).}
 
 \item{recruitment_rate}{Numeric. Poisson rate lambda for recruitment (per time unit). Default 100000.}
 
@@ -66,8 +66,7 @@ are allocated to arms according to fixed allocation probabilities, using one of:
 \code{"coin"} (independent draws), \code{"block"} (permuted block randomisation),
 or \code{"urn"} (simple reinforcement urn / Pólya-like scheme).
 Supports binary (Bernoulli), normal, and exponential outcomes and simulates trial
-duration via a Poisson recruitment process (using your
-\code{simulate_trial_duration_poisson_recruitment} function).
+duration via a Poisson recruitment process.
 }
 \examples{
 set.seed(301)

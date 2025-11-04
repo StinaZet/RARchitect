@@ -123,7 +123,7 @@ and \code{arms=2}. Defaults to \code{"coin"}. Other options are \code{"urn"}, wh
 urn-design from Zhao (2015), and \code{"block"}, which is the modified permuted
 block-design from Proper, Connett, and Murray (2021).}
 
-\item{urn_alpha}{Numeric. The mass parameter ($\alpha$) for the Zhao (2015) urn-design,
+\item{urn_alpha}{Numeric. The mass parameter (alpha) for the Zhao (2015) urn-design,
 used when \code{randmethod = "urn"}.}
 
 \item{postprobmethod}{Character. Method for calculating posterior probabilities.

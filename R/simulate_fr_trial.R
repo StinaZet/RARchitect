@@ -3,11 +3,10 @@
 #' @description
 #' Simulate a multi-arm clinical trial using Fixed Randomisation (FR). Participants
 #' are allocated to arms according to fixed allocation probabilities, using one of:
-#' \code{"coin"} (independent draws), \code{"block"} (permuted block randomisation),
-#' or \code{"urn"} (simple reinforcement urn / Pólya-like scheme).
+#' `"coin"` (independent draws), `"block"` (permuted block randomisation),
+#' or `"urn"` (simple reinforcement urn / Pólya-like scheme).
 #' Supports binary (Bernoulli), normal, and exponential outcomes and simulates trial
-#' duration via a Poisson recruitment process (using your
-#' \code{simulate_trial_duration_poisson_recruitment} function).
+#' duration via a Poisson recruitment process.
 #'
 #' @param outcome_type Character. `"binary"` or `"cont"`.
 #' @param distribution Character. `"bernoulli"`, `"normal"`, or `"exponential"`.
@@ -15,13 +14,13 @@
 #' @param N Integer. Total sample size.
 #' @param direction Character. `"lower"` or `"higher"`.
 #' @param known_var Logical. If `TRUE` treat normal variance as known (only applies to `distribution="normal"`).
-#' @param modelpar Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see \code{simulate_brar_trial} documentation).
+#' @param modelpar Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see `simulate_brar_trial` documentation).
 #' @param allocation_probs Numeric vector of length `arms` or character string. Fixed allocation probabilities (will be normalized).
-#'   Defaults to equal allocation. If set to the string \code{"dunnett"} (and \code{arms >= 2}), the probabilities are
-#'   set proportional to sqrt{k}:1:...:1, where k = arms-1 is the number of active arms (Arm 1 is control).
+#'   Defaults to equal allocation. If set to the string `"dunnett"`, the probabilities are
+#'   set proportional to sqrt(k):1:...:1, where k = arms-1 is the number of active arms (Arm 1 is control).
 #' @param randmethod Character. Randomisation method: `"coin"` (default), `"block"`, or `"urn"`.
 #' @param blocksize Integer. Block size for `"block"` randomisation. Ignored for `"coin"` and `"urn"`.
-#' @param urn_alpha Numeric. Initial urn mass parameter for `"urn"` (controls initial ball counts). Default 3.
+#' @param urn_alpha Numeric. Initial urn mass parameter for `"urn"` (controls initial ball counts).
 #' @param recruitment_rate Numeric. Poisson rate lambda for recruitment (per time unit). Default 100000.
 #' @param observation_delay Numeric. Fixed delay from recruitment to outcome observation. Default 0.
 #'
@@ -69,7 +68,7 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
                               allocation_probs = NULL,
                               randmethod = c("coin", "block", "urn"),
                               blocksize,
-                              urn_alpha = 3,
+                              urn_alpha = NULL,
                               recruitment_rate = 100000,
                               observation_delay = 0) {
 
@@ -91,7 +90,7 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
   if (observation_delay < 0 || !is.numeric(observation_delay)) {
     stop("'observation_delay' must be a non-negative number.")
   }
-  if (!is.numeric(urn_alpha) || urn_alpha <= 0) {
+  if (randmethod == "urn" && (!is.numeric(urn_alpha) || urn_alpha <= 0)) {
     stop("'urn_alpha' must be positive.")
   }
 
@@ -126,7 +125,7 @@ simulate_fr_trial <- function(outcome_type = c("binary", "cont"),
     if (sum(allocation_probs) == 0) stop("'allocation_probs' must sum to a positive number.")
     allocation_probs = allocation_probs / sum(allocation_probs)
   } else {
-    stop("'allocation_probs' must be NULL, the string \"dunnett\", or a numeric vector of length 'arms'.")
+    stop("'allocation_probs' must be NULL, the string 'dunnett', or a numeric vector of length 'arms'.")
   }
 
   # --- Handle blocksize requirements ---
