@@ -18,7 +18,7 @@
 #' @param modelpar Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see \code{simulate_brar_trial} documentation).
 #' @param allocation_probs Numeric vector of length `arms` or character string. Fixed allocation probabilities (will be normalized).
 #'   Defaults to equal allocation. If set to the string \code{"dunnett"} (and \code{arms >= 2}), the probabilities are
-#'   set proportional to $\sqrt{k}:1:\dots:1$, where $k = arms-1$ is the number of active arms (Arm 1 is control).
+#'   set proportional to sqrt{k}:1:...:1, where k = arms-1 is the number of active arms (Arm 1 is control).
 #' @param randmethod Character. Randomisation method: `"coin"` (default), `"block"`, or `"urn"`.
 #' @param blocksize Integer. Block size for `"block"` randomisation. Ignored for `"coin"` and `"urn"`.
 #' @param urn_alpha Numeric. Initial urn mass parameter for `"urn"` (controls initial ball counts). Default 3.

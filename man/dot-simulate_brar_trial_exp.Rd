@@ -16,6 +16,7 @@
   burnin = 0,
   postprobmethod,
   randmethod = "coin",
+  urn_alpha,
   multiarm_method
 )
 }

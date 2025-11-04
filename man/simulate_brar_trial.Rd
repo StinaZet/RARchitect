@@ -18,6 +18,7 @@ simulate_brar_trial(
   clipping = 0,
   burnin = 0,
   randmethod = "coin",
+  urn_alpha = NULL,
   postprobmethod = "simulation",
   multiarm_method = c("fixed", "top2"),
   recruitment_rate = 1e+05,
@@ -119,9 +120,11 @@ as a single initial block, allocated using equal randomization. Defaults to 0.}
 
 \item{randmethod}{Character. Specifies the randomisation method for \code{blocksize > 1}
 and \code{arms=2}. Defaults to \code{"coin"}. Other options are \code{"urn"}, which is the mass-weighted
-urn-design from Zhao (2015) with alpha=3, and \code{"block"}, which is the modified permuted
-block-design from Proper, Connett, and Murray (2021). For \code{arms>2}, \code{"coin"}
-is the only randomisation method.}
+urn-design from Zhao (2015), and \code{"block"}, which is the modified permuted
+block-design from Proper, Connett, and Murray (2021).}
+
+\item{urn_alpha}{Numeric. The mass parameter ($\alpha$) for the Zhao (2015) urn-design,
+used when \code{randmethod = "urn"}.}
 
 \item{postprobmethod}{Character. Method for calculating posterior probabilities.
 Can be \code{"simulation"} or \code{"exact"}. Defaults to \code{"simulation"}.}
@@ -185,6 +188,7 @@ arms = 2, N = 200, blocksize = 10, known_var = TRUE,
 priors = prior_params_norm,
 modelpar = model_params_norm,
 tuning = 1, clipping = 0, burnin = 10, randmethod = "urn",
+urn_alpha = 3,
 postprobmethod = "exact", # Or "simulation"
 recruitment_rate = 10,
 observation_delay = 15)

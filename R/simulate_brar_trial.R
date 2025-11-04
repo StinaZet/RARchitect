@@ -87,7 +87,7 @@
 #' and `arms=2`. Defaults to `"coin"`. Other options are `"urn"`, which is the mass-weighted
 #' urn-design from Zhao (2015), and `"block"`, which is the modified permuted
 #' block-design from Proper, Connett, and Murray (2021).
-#' @param urn_alpha Numeric. The mass parameter ($\alpha$) for the Zhao (2015) urn-design,
+#' @param urn_alpha Numeric. The mass parameter (alpha) for the Zhao (2015) urn-design,
 #' used when `randmethod = "urn"`.
 #' @param postprobmethod Character. Method for calculating posterior probabilities.
 #' Can be `"simulation"` or `"exact"`. Defaults to `"simulation"`.

@@ -33,9 +33,11 @@ simulate_fr_trial(
 
 \item{known_var}{Logical. If \code{TRUE} treat normal variance as known (only applies to \code{distribution="normal"}).}
 
-\item{modelpar}{Numeric vector or matrix. True data-generating parameters (see \code{simulate_brar_trial} documentation).}
+\item{modelpar}{Numeric vector or matrix. True data-generating parameters, where the first entry is for the control arm (see \code{simulate_brar_trial} documentation).}
 
-\item{allocation_probs}{Numeric vector of length \code{arms}. Fixed allocation probabilities (will be normalized). Defaults to equal allocation.}
+\item{allocation_probs}{Numeric vector of length \code{arms} or character string. Fixed allocation probabilities (will be normalized).
+Defaults to equal allocation. If set to the string \code{"dunnett"} (and \code{arms >= 2}), the probabilities are
+set proportional to $\sqrt{k}:1:\dots:1$, where $k = arms-1$ is the number of active arms (Arm 1 is control).}
 
 \item{randmethod}{Character. Randomisation method: \code{"coin"} (default), \code{"block"}, or \code{"urn"}.}
 
@@ -73,8 +75,7 @@ simulate_fr_trial(
   outcome_type = "binary", distribution = "bernoulli",
   arms = 2, N = 100, modelpar = c(0.6, 0.4),
   allocation_probs = c(0.5, 0.5),
-  randmethod = "coin", recruitment_rate = 5, observation_delay = 10
-)
+  randmethod = "coin", recruitment_rate = 5, observation_delay = 10)
 
 set.seed(302)
 simulate_fr_trial(
@@ -83,15 +84,14 @@ simulate_fr_trial(
   modelpar = matrix(c(10, 8, 6, 2, 2, 2), nrow = 2, byrow = TRUE),
   allocation_probs = c(0.5, 0.3, 0.2),
   randmethod = "block", blocksize = 10,
-  recruitment_rate = 10, observation_delay = 5
-)
+  recruitment_rate = 10, observation_delay = 5)
 
 set.seed(303)
 simulate_fr_trial(
-  outcome_type = "binary", distribution = "bernoulli",
-  arms = 3, N = 120, modelpar = c(0.3, 0.5, 0.7),
-  allocation_probs = c(0.4, 0.4, 0.2),
-  randmethod = "urn", urn_alpha = 5,
-  recruitment_rate = 8, observation_delay = 2
-)
+ outcome_type = "binary", distribution = "bernoulli",
+ arms = 3, N = 120, modelpar = c(0.3, 0.5, 0.7),
+ allocation_probs = "dunnett", # <-- NEW EXAMPLE
+ randmethod = "urn", urn_alpha = 5,
+ recruitment_rate = 8, observation_delay = 2)
+
 }

@@ -17,6 +17,7 @@
   postprobmethod,
   randmethod = "coin",
   multiarm_method,
+  urn_alpha,
   known_var = FALSE
 )
 }
