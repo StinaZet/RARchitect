@@ -1,39 +1,41 @@
 # Randomization-based hypothesis test.
-perform_permutation_test <- function(y_c, n_c, y_e, n_e, direction, B = 1000) {
+#' @title Perform a Randomization-Based Permutation Test
+
+perform_permutation_test <- function(y_c, n_c, y_e, n_e,
+                                      alternative = "two.sided", B = 1000) {
 
   # 1. Calculate the observed test statistic (Difference in Proportions)
+  # Handle division by zero if n_c or n_e is 0 (though analyze_brar_trial checks this)
+  if (n_e == 0 || n_c == 0) return(NA_real_)
   p_obs <- y_e/n_e - y_c/n_c
 
   # 2. Pool the data (Outcomes under H0)
   n_total <- n_c + n_e
   y_total <- y_c + y_e
 
-  # Create the vector of all observed outcomes (1 for success, 0 for failure)
   outcomes <- c(rep(1, y_total), rep(0, n_total - y_total))
 
   perm_stats <- numeric(B)
 
   # 3. Permutation Loop
   for (i in 1:B) {
-    # Randomly shuffle the pooled outcomes
     perm_outcomes <- sample(outcomes)
-
-    # Assign the first n_e outcomes to the Experimental arm and the rest to Control
     y_e_perm <- sum(perm_outcomes[1:n_e])
     y_c_perm <- sum(perm_outcomes[(n_e + 1):n_total])
 
-    # Calculate the permuted difference in proportions
     perm_stats[i] <- y_e_perm/n_e - y_c_perm/n_c
   }
 
   # 4. Calculate p-value
-  # P-value is the proportion of permuted statistics as extreme or more extreme than the observed.
-  if (direction == "higher") {
+  if (alternative == "greater") {
     # One-sided test for p_e > p_c (positive difference)
-    p_value <- sum(perm_stats >= p_obs) / B
-  } else {
+    p_value <- (sum(perm_stats >= p_obs) + 1) / (B + 1) # Add +1 for obs
+  } else if (alternative == "less") {
     # One-sided test for p_e < p_c (negative difference)
-    p_value <- sum(perm_stats <= p_obs) / B
+    p_value <- (sum(perm_stats <= p_obs) + 1) / (B + 1) # Add +1 for obs
+  } else {
+    # Two-sided p-value: P(|T_perm| >= |T_obs|)
+    p_value <- (sum(abs(perm_stats) >= abs(p_obs)) + 1) / (B + 1) # Add +1 for obs
   }
 
   return(p_value)
