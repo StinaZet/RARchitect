@@ -1,19 +1,20 @@
 #' @title Analyze a Single BRAR/FR Trial Replicate
 #'
 #' @description
-#' Wrapper function to analyze a single BRAR or Fixed Randomization trial replicate
+#' Wrapper function to analyze a single BRAR or Fixed Randomization (FR) trial replicate
 #' with binary, normal, or exponential outcomes.
-#' Returns effect estimates, p-values, and confidence intervals (no coverage).
-#' Also reports patient benefit = number of patients on estimated best arm.
 #'
-#' @param trial_data Data frame with trial results.
+#' Returns estimated treatment effects, p-values, and confidence intervals.
+#' Also reports patient benefit (number of patients on the estimated best arm).
+#'
+#' @param trial_data Data frame containing trial results.
 #'   Must include columns 'Arm' and 'Outcome'.
 #' @param N Total sample size.
 #' @param arms Number of treatment arms.
 #' @param direction "lower" or "higher" (indicates which outcome is favorable).
 #' @param priors Matrix of prior parameters for Bayesian estimation (2 x K for binary).
 #' @param distribution "bernoulli", "normal", or "exponential".
-#' @param known_var Logical, used only for normal outcomes with known variance.
+#' @param known_var Logical, for normal outcomes with known variance.
 #' @param estimation_method "MLE", "IPW", or "post_mean" (for binary outcomes).
 #' @param test_method "wald", "exact", "randomization", "AP", or "simulation".
 #' @param CI_method "wald" or "simulation".
@@ -21,44 +22,68 @@
 #' @param multiple_tests Logical; if TRUE, test all experimental arms vs control with Bonferroni adjustment.
 #' @param onesided Logical; if TRUE, perform one-sided test.
 #' @param alpha Significance level (used for CI and tests).
-#' @param prob_threshold Posterior probability threshold (for future Bayesian use).
-#' @param ... Additional arguments passed to test methods (e.g., B, policy_file, randmethod, blocksize, postprobmethod, multiarm_method).
+#' @param prob_threshold Posterior probability threshold (for Bayesian decision rules).
+#' @param ... Additional arguments passed to test methods (e.g. `B`, `policy_file`, `randmethod`, `blocksize`, `postprobmethod`, `multiarm_method`).
 #'
-#' @return List with components:
-#'   - test_results_df: data frame with effect estimates, p-values, and CIs.
-#'   - patient_benefit: number of patients on estimated best experimental arm.
-#'   - mean_outcome: mean outcome across all patients.
+#' @return A list with:
+#' \describe{
+#'   \item{test_results_df}{Data frame with estimated effects, confidence intervals, and p-values.}
+#'   \item{patient_benefit}{Number of patients allocated to the best estimated arm.}
+#'   \item{mean_outcome}{Overall mean outcome across patients.}
+#' }
 #'
 #' @details
-#' Warnings are issued if methods may not be appropriate for BRAR data:
-#'   - MLE estimation may be biased under adaptive randomization.
-#'   - Wald test and Wald confidence intervals may not be valid under BRAR.
+#' **Notes:**
+#' - MLE estimation may be biased under adaptive randomization.
+#' - Wald test and Wald confidence intervals may not be valid for BRAR data.
+#' - For adaptive designs, prefer "post_mean" or "IPW" estimation and "randomization" or "AP" testing.
 #'
 #' @examples
-#' # Simulation-based test
-#' analyze_brar_trial(
-#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
-#'   priors = matrix(c(1,1,1,1,1,1), nrow = 2),
-#'   distribution = "bernoulli",
-#'   test_method = "simulation", CI_method = "simulation",
-#'   B = 5000
+#' # --- Example setup ---
+#' set.seed(123)
+#' N = 60
+#' arms = 3
+#' priors = matrix(c(1,1,1, 1,1,1), nrow = 2)  # Beta(1,1) for each arm
+#'
+#' # Simulate a BRAR trial
+#' trial_df = simulate_brar_trial(
+#'   N = N, arms = arms,
+#'   p_true = c(0.3, 0.5, 0.6),
+#'   priors = priors,
+#'   direction = "higher",
+#'   blocksize = 6,
+#'   randmethod = "block",
+#'   postprobmethod = "simulation"
 #' )
 #'
-#' # Wald test (with warnings)
+#' # --- Example 1: Simulation-based test ---
 #' analyze_brar_trial(
-#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
-#'   priors = matrix(c(1,1,1,1,1,1), nrow = 2),
+#'   trial_data = trial_df, N = N, arms = arms,
+#'   direction = "higher", priors = priors,
 #'   distribution = "bernoulli",
+#'   estimation_method = "post_mean",
+#'   test_method = "simulation", CI_method = "simulation",
+#'   B = 2000
+#' )
+#'
+#' # --- Example 2: Wald test (not recommended for BRAR) ---
+#' analyze_brar_trial(
+#'   trial_data = trial_df, N = N, arms = arms,
+#'   direction = "higher", priors = priors,
+#'   distribution = "bernoulli",
+#'   estimation_method = "MLE",
 #'   test_method = "wald", CI_method = "wald"
 #' )
 #'
-#' # AP test example
+#' # --- Example 3: AP test (Allocation-Probability test) ---
 #' analyze_brar_trial(
-#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
-#'   priors = matrix(c(1,1,1,1,1,1), nrow = 2),
+#'   trial_data = trial_df, N = N, arms = arms,
+#'   direction = "higher", priors = priors,
 #'   distribution = "bernoulli",
+#'   estimation_method = "IPW",
 #'   test_method = "AP", CI_method = "simulation",
-#'   randmethod = "block", blocksize = 5, postprobmethod = "simulation"
+#'   randmethod = "block", blocksize = 6,
+#'   postprobmethod = "simulation"
 #' )
 #'
 #' @export
@@ -72,7 +97,7 @@ analyze_brar_trial <- function(
     alpha = 0.05, prob_threshold = NULL, ...
 ) {
 
-  # --- Validate inputs ---
+  # --- Validate arguments ---
   distribution = match.arg(distribution, c("bernoulli", "normal", "exponential"))
   direction = match.arg(direction, c("lower", "higher"))
   estimation_method = match.arg(estimation_method, c("MLE", "IPW", "post_mean"))
@@ -83,18 +108,15 @@ analyze_brar_trial <- function(
     effect_measure = match.arg(effect_measure, c("riskdifference"))
   }
 
-  # --- Issue warnings for BRAR-specific considerations ---
-  if (estimation_method == "MLE") {
-    warning("MLE estimation may not be appropriate for BRAR data. Consider 'IPW' or 'post_mean'.")
-  }
-  if (test_method == "wald") {
+  # --- Method warnings for BRAR data ---
+  if (estimation_method == "MLE")
+    warning("MLE estimation may be biased under BRAR. Consider 'IPW' or 'post_mean'.")
+  if (test_method == "wald")
     warning("Wald test may not be appropriate for BRAR data. Consider 'randomization', 'simulation', or 'AP'.")
-  }
-  if (CI_method == "wald") {
+  if (CI_method == "wald")
     warning("Wald confidence intervals may not be appropriate for BRAR data. Consider 'simulation' CIs.")
-  }
 
-  # --- Dispatch to internal helper functions ---
+  # --- Dispatch to correct helper based on distribution ---
   results = switch(
     distribution,
     "bernoulli" = .analyze_brar_trial_binary(

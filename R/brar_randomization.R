@@ -67,7 +67,8 @@ brar_randomization <- function(
           alloc_probs = c(1/arms, other_probs)
         }
       } else if (multiarm_method == "top2") {
-        alloc_probs = top2_probs(alloc_probs)
+        top2beta = 0.5
+        alloc_probs = alloc_probs_T2TS(alloc_probs, top2beta)
       }
     }
 

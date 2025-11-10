@@ -45,8 +45,8 @@ monte_carlo_test_brar <- function(y_c, n_c, y_e_list, n_e_list,
     y_e = y_e_list[[i]]
     T_obs = y_e / n_e - y_c / n_c
 
-    y_c_sim = rbinom(B, n_c, pooled_p[i])
-    y_e_sim = rbinom(B, n_e, pooled_p[i])
+    y_c_sim = stats::rbinom(B, n_c, pooled_p[i])
+    y_e_sim = stats::rbinom(B, n_e, pooled_p[i])
     T_sim = y_e_sim / n_e - y_c_sim / n_c
 
     if (direction == "higher") {

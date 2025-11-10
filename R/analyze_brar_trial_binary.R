@@ -150,10 +150,10 @@
       }
 
       if (test_method == "exact") {
-        policy_file = list(...)$policy_file
-        blocksize = list(...)$blocksize
-        policy_data = .load_cxs_policy(policy_file, N, blocksize)
-        test_results_df$p_value[i] = .perform_cxs_test(y_c, n_c, y_e, n_e, N, policy_data$pvals_CXS)
+        #policy_file = list(...)$policy_file
+        #blocksize = list(...)$blocksize
+        #policy_data = .load_cxs_policy(policy_file, N, blocksize)
+        #test_results_df$p_value[i] = .perform_cxs_test(y_c, n_c, y_e, n_e, N, policy_data$pvals_CXS)
       }
     }
   }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulate_brar_trial.R
 \name{simulate_brar_trial}
 \alias{simulate_brar_trial}
-\title{Simulate a Response Adaptive Randomization (RAR) Trial for Binary or Normal Outcomes}
+\title{Simulate a Bayesian Response Adaptive Randomization (BRAR) Trial for Binary or Continuous Outcomes}
 \usage{
 simulate_brar_trial(
   outcome_type = c("binary", "cont"),
