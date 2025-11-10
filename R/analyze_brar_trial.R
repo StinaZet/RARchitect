@@ -1,106 +1,71 @@
 #' @title Analyze a Single BRAR/FR Trial Replicate
 #'
 #' @description
-#' Calculates the operating characteristics (estimation, hypothesis test results,
-#' patient benefit, and allocation metrics) for a single simulated clinical trial
-#' replicate.
+#' Wrapper to analyze a trial replicate with real data. Assumes binary, normal, or exponential outcomes.
+#' Reports effect estimates, p-values, and confidence intervals (no coverage).
+#' Patient benefit = number of patients on estimated best arm.
 #'
-#' This function serves as a wrapper that validates inputs and dispatches
-#' to the appropriate internal helper function based on the outcome's
-#' \code{distribution} (e.g., \code{.analyze_brar_trial_binary}).
+#' @param trial_data Data frame containing trial results.
+#' @param N Total sample size.
+#' @param arms Number of arms.
+#' @param direction "lower" or "higher".
+#' @param priors Matrix of prior parameters for Bayesian estimation.
+#' @param distribution "bernoulli", "normal", or "exponential".
+#' @param known_var Logical, for normal outcomes.
+#' @param estimation_method "MLE", "IPW", or "post_mean".
+#' @param test_method "wald", "exact", "randomization", "AP", or "simulation".
+#' @param CI_method "wald" or "simulation".
+#' @param effect_measure Currently only "riskdifference" for binary outcomes.
+#' @param multiple_tests Logical, test all experimental arms vs control with Bonferroni adjustment.
+#' @param onesided Logical, one-sided if TRUE.
+#' @param alpha Significance level (used for CI).
+#' @param prob_threshold Posterior probability threshold (future Bayesian use).
+#' @param ... Additional arguments for test methods (e.g., B, policy_file).
 #'
-#' @param trial_data A data frame containing the results of a single trial simulation
-#'                   (output of \code{simulate_brar_trial} or \code{simulate_fr_trial}).
-#' @param N Numeric. Total sample size for the trial.
-#' @param arms Numeric. Number of arms in the trial.
-#' @param direction Character. Specifies the direction of the desired treatment effect
-#'                  (\code{"lower"} or \code{"higher"}).
-#' @param priors Matrix. The prior parameters used in the simulation (needed for Bayesian estimation).
-#' @param modelpar Matrix or Numeric vector. The true parameters for each arm (needed for benefit and power/T1E calculations).
-#' @param distribution Character. Specifies the outcome distribution (\code{"bernoulli"}, \code{"normal"}, or \code{"exponential"}).
-#' @param known_var Logical. If \code{TRUE}, the variance is known for Normal outcomes.
-#' @param estimation_method Character. Method to estimate the effect for each arm (e.g., "MLE", "posterior_mean").
-#' @param test_method Character. Hypothesis testing method (e.g., "wald", "exact_conditional", "bayesian_pp").
-#' @param effect_measure Character. The measure of effect for binary outcomes.
-#'   Currently only \code{"riskdifference"} is supported.
-#' @param multiple_tests Logical. If \code{FALSE} (default), only test the
-#'   *estimated* best experimental arm vs. control. If \code{TRUE}, test
-#'   *all* experimental arms vs. control.
-#' @param onesided Logical. If \code{TRUE} (default), performs a one-sided test
-#'   based on \code{direction}. If \code{FALSE}, performs a two-sided test.
-#' @param alpha Numeric. Significance level (frequentist Type I Error rate) or 1-CI level.
-#' @param prob_threshold Numeric. The posterior probability threshold for Bayesian testing.
-#' @param null_effect Numeric. Value representing the null hypothesis (typically 0).
-#' @param ... Additional arguments to be passed to internal test methods (e.g., \code{B} for permutation test).
-#'
-#' @return A list containing the calculated metrics for the single replicate,
-#'         as returned by the internal helper functions.
+#' @return List with \code{test_results_df} and \code{patient_benefit}.
 #' @export
 analyze_brar_trial <- function(
-    trial_data, N, arms, direction, priors, modelpar, distribution, known_var,
-    estimation_method, test_method,
-    effect_measure = "riskdifference", # <-- NEW ARGUMENT
-    alpha, prob_threshold, null_effect,
-    multiple_tests = FALSE, onesided = TRUE, ...
+    trial_data, N, arms, direction, priors, distribution, known_var = NULL,
+    estimation_method = c("MLE", "IPW", "post_mean"),
+    test_method = c("wald", "exact", "randomization", "AP", "simulation"),
+    CI_method = c("wald", "simulation"),
+    effect_measure = "riskdifference",
+    multiple_tests = FALSE, onesided = TRUE,
+    alpha = 0.05, prob_threshold = NULL, ...
 ) {
 
-  # 1. Input Validation
-  # Basic checks before dispatching
-  if (missing(trial_data) || missing(distribution) || missing(modelpar)) {
-    stop("Arguments 'trial_data', 'distribution', and 'modelpar' must be provided.")
-  }
-
+  # Validate inputs
   distribution <- match.arg(distribution, c("bernoulli", "normal", "exponential"))
   direction <- match.arg(direction, c("lower", "higher"))
+  estimation_method <- match.arg(estimation_method, c("MLE", "IPW", "post_mean"))
+  test_method <- match.arg(test_method, c("wald", "exact", "randomization", "AP", "simulation"))
+  CI_method <- match.arg(CI_method, c("wald", "simulation"))
 
-  # --- NEW VALIDATION ---
   if (distribution == "bernoulli") {
-    # Only validate/match this argument if distribution is bernoulli
     effect_measure <- match.arg(effect_measure, c("riskdifference"))
-  } else if (!missing(effect_measure) && effect_measure != "riskdifference") {
-    # If user supplied a non-default value for other distributions, warn them
-    warning("'effect_measure' is only applicable for 'bernoulli' distribution and will be ignored.")
-    effect_measure <- "riskdifference" # Reset to default (it won't be used anyway)
   }
-  # --- END NEW VALIDATION ---
 
-  # 2. Dispatch to internal helper
-  # Call the appropriate function based on the distribution
-
+  # Dispatch to internal helper
   results <- switch(
     distribution,
-
     "bernoulli" = .analyze_brar_trial_binary(
-      trial_data = trial_data, N = N, arms = arms, direction = direction,
-      priors = priors, modelpar = modelpar,
-      estimation_method = estimation_method, test_method = test_method,
-      effect_measure = effect_measure, # <-- PASSING NEW ARGUMENT
-      alpha = alpha, prob_threshold = prob_threshold, null_effect = null_effect,
-      multiple_tests = multiple_tests, onesided = onesided, ...
+      trial_data = trial_data, priors = priors, N = N, arms = arms, direction = direction,
+      estimation_method = estimation_method, test_method = test_method, CI_method = CI_method,
+      effect_measure = effect_measure, alpha = alpha, multiple_tests = multiple_tests,
+      onesided = onesided, ...
     ),
-
     "normal" = .analyze_brar_trial_normal(
-      trial_data = trial_data, N = N, arms = arms, direction = direction,
-      priors = priors, modelpar = modelpar, known_var = known_var,
+      trial_data = trial_data, priors = priors, N = N, arms = arms, direction = direction,
+      known_var = known_var,
       estimation_method = estimation_method, test_method = test_method,
-      alpha = alpha, prob_threshold = prob_threshold, null_effect = null_effect,
-      multiple_tests = multiple_tests, onesided = onesided, ...
-      # Note: effect_measure is NOT passed to the normal helper
+      alpha = alpha, multiple_tests = multiple_tests, onesided = onesided, ...
     ),
-
     "exponential" = .analyze_brar_trial_exp(
-      trial_data = trial_data, N = N, arms = arms, direction = direction,
-      priors = priors, modelpar = modelpar,
+      trial_data = trial_data, priors = priors, N = N, arms = arms, direction = direction,
       estimation_method = estimation_method, test_method = test_method,
-      alpha = alpha, prob_threshold = prob_threshold, null_effect = null_effect,
-      multiple_tests = multiple_tests, onesided = onesided, ...
-      # Note: effect_measure is NOT passed to the exponential helper
-    ),
-
-    # Default case if no match (should be caught by match.arg, but good practice)
-    stop(paste("No analysis function available for distribution:", distribution))
+      alpha = alpha, multiple_tests = multiple_tests, onesided = onesided, ...
+    )
   )
 
-  # 3. Return results from the helper
   return(results)
 }

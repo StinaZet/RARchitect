@@ -83,3 +83,73 @@ perform_mc_test <- function(y_c, n_c, y_e, n_e,
 
   return(p_value)
 }
+
+
+# The AP test for binary data with BRAR.
+ap_test_brar <- function(trial_data, arms, N, burnin = 0, B = 10000,
+                         direction = c("higher", "lower"),
+                         multiple_tests = FALSE, onesided = TRUE,
+                         priors, blocksize, ...) {
+
+  direction <- match.arg(direction, c("higher", "lower"))
+
+  # Determine which experimental arms to test
+  if (multiple_tests) {
+    arms_to_test <- 2:arms
+  } else {
+    exp_means <- tapply(trial_data$Outcome, trial_data$Arm, mean)
+    best_arm <- if (direction == "higher") which.max(exp_means[-1]) + 1 else which.min(exp_means[-1]) + 1
+    arms_to_test <- best_arm
+  }
+
+  # Pooled mean for null
+  pooled_mean <- mean(trial_data$Outcome)
+
+  # Observed differences: experimental - control
+  obs_stats <- sapply(arms_to_test, function(k) {
+    mean(trial_data$Outcome[trial_data$Arm == k]) -
+      mean(trial_data$Outcome[trial_data$Arm == 1])
+  })
+
+  # Null distribution via BRAR simulations
+  null_stats <- matrix(NA, nrow = B, ncol = length(arms_to_test))
+  for (b in 1:B) {
+    sim_data <- .simulate_brar_trial_binary(
+      direction = direction,
+      arms = arms,
+      N = N,
+      blocksize = blocksize,
+      priors = priors,
+      modelpar = rep(pooled_mean, arms),
+      burnin = burnin,
+      ...
+    )
+
+    for (i in seq_along(arms_to_test)) {
+      k <- arms_to_test[i]
+      null_stats[b, i] <- mean(sim_data$Outcome[sim_data$Arm == k]) -
+        mean(sim_data$Outcome[sim_data$Arm == 1])
+    }
+  }
+
+  # Compute p-values
+  p_values <- numeric(length(arms_to_test))
+  for (i in seq_along(arms_to_test)) {
+    if (onesided) {
+      if (direction == "higher") {
+        p_values[i] <- mean(null_stats[, i] >= obs_stats[i])
+      } else {
+        p_values[i] <- mean(null_stats[, i] <= obs_stats[i])
+      }
+    } else {
+      p_values[i] <- mean(null_stats[, i] >= obs_stats[i]) +
+        mean(null_stats[, i] <= obs_stats[i])
+      p_values[i] <- min(p_values[i], 1)
+    }
+  }
+
+  names(p_values) <- paste0("Arm", arms_to_test)
+  return(p_values)
+}
+
+
