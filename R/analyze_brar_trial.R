@@ -1,4 +1,4 @@
-#' @title Analyze a Single BRAR/FR Trial Replicate
+#' @title Analyze a Single BRAR Trial
 #'
 #' @description
 #' Wrapper function to analyze a single BRAR or Fixed Randomization (FR) trial replicate
