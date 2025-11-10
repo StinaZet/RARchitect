@@ -47,25 +47,21 @@
 #'   test_method = "AP", CI_method = "simulation",
 #'   randmethod = "block", blocksize = 5, postprobmethod = "simulation"
 #' )
-analyze_brar_trial <- function(
-    trial_data, N, arms, direction, priors, distribution, known_var = NULL,
-    estimation_method = c("MLE", "IPW", "post_mean"),
-    test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-    CI_method = c("wald", "simulation"),
-    effect_measure = "riskdifference",
-    multiple_tests = FALSE, onesided = TRUE,
-    alpha = 0.05, prob_threshold = NULL, ...
-) {
+analyze_brar_trial <- function(trial_data, N, arms, direction, priors, distribution,
+                               estimation_method=c("MLE","post_mean"),
+                               test_method=c("wald","randomization","simulation","AP"),
+                               CI_method=c("wald","simulation"),
+                               multiple_tests=FALSE, onesided=TRUE, alpha=0.05, ...) {
 
   # Validate inputs
-  distribution <- match.arg(distribution, c("bernoulli", "normal", "exponential"))
-  direction <- match.arg(direction, c("lower", "higher"))
-  estimation_method <- match.arg(estimation_method, c("MLE", "IPW", "post_mean"))
-  test_method <- match.arg(test_method, c("wald", "exact", "randomization", "AP", "simulation"))
-  CI_method <- match.arg(CI_method, c("wald", "simulation"))
+  distribution = match.arg(distribution, c("bernoulli", "normal", "exponential"))
+  estimation_method = match.arg(estimation_method)
+  test_method = match.arg(test_method)
+  CI_method = match.arg(CI_method)
+  direction = match.arg(direction, c("higher","lower"))
 
   if (distribution == "bernoulli") {
-    effect_measure <- match.arg(effect_measure, c("riskdifference"))
+    effect_measure = match.arg(effect_measure, c("riskdifference"))
   }
 
   # Warnings about methods not suitable for BRAR data
@@ -80,7 +76,7 @@ analyze_brar_trial <- function(
   }
 
   # Dispatch to internal helper
-  results <- switch(
+  results = switch(
     distribution,
     "bernoulli" = .analyze_brar_trial_binary(
       trial_data = trial_data, priors = priors, N = N, arms = arms, direction = direction,
@@ -103,3 +99,5 @@ analyze_brar_trial <- function(
 
   return(results)
 }
+
+
