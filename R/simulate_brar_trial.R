@@ -1,4 +1,4 @@
-#' @title Simulate a Bayesian Response Adaptive Randomization (RAR) Trial for Binary or Continuous Outcomes
+#' @title Simulate a Bayesian Response Adaptive Randomization (BRAR) Trial for Binary or Continuous Outcomes
 #'
 #' @description
 #' This function simulates a multi-arm clinical trial using Bayesian Response-Adaptive
