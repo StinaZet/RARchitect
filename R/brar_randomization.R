@@ -16,7 +16,7 @@
 #' @param return Character. Either "allocations" (default) or "probabilities".
 #' @return Either a vector of randomized allocations or a matrix of allocation probabilities.
 #' @export
-generate_brar_randomization <- function(
+brar_randomization <- function(
     trial_data, priors, blocksize, direction = c("higher", "lower"),
     postprobmethod = c("simulation", "exact"), multiarm_method = c("top2", "fixed"),
     tuning = 1, clipping = 0, urn_alpha = 0, randmethod = c("coin", "block", "urn"),
