@@ -20,10 +20,33 @@
 #' @param onesided Logical, one-sided if TRUE.
 #' @param alpha Significance level (used for CI).
 #' @param prob_threshold Posterior probability threshold (future Bayesian use).
-#' @param ... Additional arguments for test methods (e.g., B, policy_file).
+#' @param ... Additional arguments for test methods (e.g., B, policy_file, randmethod, blocksize).
 #'
 #' @return List with \code{test_results_df} and \code{patient_benefit}.
 #' @export
+#'
+#' @examples
+#' # Simulation-based test example
+#' analyze_brar_trial(
+#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
+#'   priors = matrix(c(1,1,1,1,1,1), nrow=2), distribution = "bernoulli",
+#'   test_method = "simulation", CI_method = "simulation"
+#' )
+#'
+#' # Wald test example (will give a warning)
+#' analyze_brar_trial(
+#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
+#'   priors = matrix(c(1,1,1,1,1,1), nrow=2), distribution = "bernoulli",
+#'   test_method = "wald", CI_method = "wald"
+#' )
+#'
+#' # AP test example
+#' analyze_brar_trial(
+#'   trial_data = trial_df, N = 100, arms = 3, direction = "higher",
+#'   priors = matrix(c(1,1,1,1,1,1), nrow=2), distribution = "bernoulli",
+#'   test_method = "AP", CI_method = "simulation",
+#'   randmethod = "block", blocksize = 5, postprobmethod = "simulation"
+#' )
 analyze_brar_trial <- function(
     trial_data, N, arms, direction, priors, distribution, known_var = NULL,
     estimation_method = c("MLE", "IPW", "post_mean"),
@@ -43,6 +66,17 @@ analyze_brar_trial <- function(
 
   if (distribution == "bernoulli") {
     effect_measure <- match.arg(effect_measure, c("riskdifference"))
+  }
+
+  # Warnings about methods not suitable for BRAR data
+  if (estimation_method == "MLE") {
+    warning("MLE estimation may not be appropriate for BRAR data. Consider 'IPW' or 'post_mean'.")
+  }
+  if (test_method == "wald") {
+    warning("Wald test may not be appropriate for BRAR data. Consider 'randomization', 'simulation', or 'AP'.")
+  }
+  if (CI_method == "wald") {
+    warning("Wald confidence intervals may not be appropriate for BRAR data. Consider 'simulation' CIs.")
   }
 
   # Dispatch to internal helper
