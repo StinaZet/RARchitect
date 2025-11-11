@@ -110,23 +110,40 @@
   if (test_method %in% c("AP", "simulation", "randomization")) {
 
     if (test_method == "AP") {
+      args = list(...)
+      args$tuning = ifelse(!"tuning" %in% names(args), 1, args$tuning)
+      args$clipping = ifelse(!"clipping" %in% names(args), 0, args$clipping)
+      args$burnin = ifelse(!"burnin" %in% names(args), 0, args$burnin)
+      args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
+
       test_results_df$p_value = ap_test_brar(
-        trial_data = trial_data, direction = direction,
-        multiple_tests = multiple_tests, onesided = onesided,
-        B = B, priors = priors, ...
-      )
+        trial_data = trial_data,
+        priors = priors,
+        direction = direction,
+        blocksize = args$blocksize,
+        randmethod = args$randmethod,
+        tuning = args$tuning,
+        clipping = args$clipping,
+        postprobmethod = args$postprobmethod,
+        multiarm_method = args$multiarm_method,
+        modelpar = rep(mean(trial_data$Outcome), arms),
+        urn_alpha = args$urn_alpha,
+        burnin = args$burnin,
+        multiple_tests = multiple_tests,
+        onesided = onesided,
+        alpha = alpha,
+        B = B,
+        N = N)$p_values
     } else if (test_method == "simulation") {
       test_results_df$p_value = monte_carlo_test_brar(
         y_c = y_c, n_c = n_c,
         y_e_list = lapply(arms_to_test, function(k) arm_summary[[k]]$y),
         n_e_list = lapply(arms_to_test, function(k) arm_summary[[k]]$n),
-        alternative = alternative_str, B = B
-      )
+        alternative = alternative_str, B = B)
     } else if (test_method == "randomization") {
       test_results_df$p_value = randomization_test_brar(
         trial_data = trial_data, priors = priors, B = B,
-        direction = direction, arms_to_test = arms_to_test, ...
-      )
+        direction = direction, arms_to_test = arms_to_test, ...)
     }
 
   } else {

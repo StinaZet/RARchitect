@@ -2,7 +2,7 @@
 % Please edit documentation in R/analyze_brar_trial.R
 \name{analyze_brar_trial}
 \alias{analyze_brar_trial}
-\title{Analyze a Single BRAR/FR Trial Replicate}
+\title{Analyze a Single BRAR Trial}
 \usage{
 analyze_brar_trial(
   trial_data,
@@ -81,27 +81,29 @@ Also reports patient benefit (number of patients on the estimated best arm).
 }
 }
 \examples{
-# --- Example setup ---
-set.seed(123)
-N = 60
-arms = 3
-priors = matrix(c(1,1,1, 1,1,1), nrow = 2)  # Beta(1,1) for each arm
-
-# Simulate a BRAR trial
-trial_df = simulate_brar_trial(
-  N = N, arms = arms,
-  p_true = c(0.3, 0.5, 0.6),
-  priors = priors,
+# --- Example setup: simulate a BRAR trial with multiarm_method = "top2" ---
+set.seed(103)
+results_binary_multiarm = simulate_brar_trial(
+  outcome_type = "binary",
+  distribution = "bernoulli",
   direction = "higher",
-  blocksize = 6,
-  randmethod = "block",
-  postprobmethod = "simulation"
+  arms = 3, N = 150, burnin = 15, blocksize = 1,
+  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+  modelpar = c(0.5, 0.7, 0.8),
+  tuning = 1,
+  clipping = 0,
+  randmethod = "coin",
+  postprobmethod = "simulation",
+  recruitment_rate = 8,
+  observation_delay = 20
 )
 
 # --- Example 1: Simulation-based test ---
 analyze_brar_trial(
-  trial_data = trial_df, N = N, arms = arms,
-  direction = "higher", priors = priors,
+  trial_data = results_binary_multiarm,
+  N = 150, arms = 3,
+  direction = "higher",
+  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
   distribution = "bernoulli",
   estimation_method = "post_mean",
   test_method = "simulation", CI_method = "simulation",
@@ -110,8 +112,10 @@ analyze_brar_trial(
 
 # --- Example 2: Wald test (not recommended for BRAR) ---
 analyze_brar_trial(
-  trial_data = trial_df, N = N, arms = arms,
-  direction = "higher", priors = priors,
+  trial_data = results_binary_multiarm,
+  N = 150, arms = 3,
+  direction = "higher",
+  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
   distribution = "bernoulli",
   estimation_method = "MLE",
   test_method = "wald", CI_method = "wald"
@@ -119,13 +123,14 @@ analyze_brar_trial(
 
 # --- Example 3: AP test (Allocation-Probability test) ---
 analyze_brar_trial(
-  trial_data = trial_df, N = N, arms = arms,
-  direction = "higher", priors = priors,
+  trial_data = results_binary_multiarm,
+  N = 150, arms = 3,
+  direction = "higher",
+  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
   distribution = "bernoulli",
   estimation_method = "IPW",
   test_method = "AP", CI_method = "simulation",
-  randmethod = "block", blocksize = 6,
-  postprobmethod = "simulation"
-)
+  randmethod = "coin", blocksize = 1,
+  postprobmethod = "simulation", multiarm_method = "top2")
 
 }

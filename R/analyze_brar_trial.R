@@ -45,14 +45,13 @@
 #'   outcome_type = "binary",
 #'   distribution = "bernoulli",
 #'   direction = "higher",
-#'   arms = 3, N = 150, burnin = 15, blocksize = 15,
+#'   arms = 3, N = 150, burnin = 15, blocksize = 1,
 #'   priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #'   modelpar = c(0.5, 0.7, 0.8),
 #'   tuning = 1,
 #'   clipping = 0,
 #'   randmethod = "coin",
 #'   postprobmethod = "simulation",
-#'   multiarm_method = "top2",
 #'   recruitment_rate = 8,
 #'   observation_delay = 20
 #' )
@@ -89,9 +88,8 @@
 #'   distribution = "bernoulli",
 #'   estimation_method = "IPW",
 #'   test_method = "AP", CI_method = "simulation",
-#'   randmethod = "coin", blocksize = 15,
-#'   postprobmethod = "simulation", multiarm_method = "top2"
-#' )
+#'   randmethod = "coin", blocksize = 1,
+#'   postprobmethod = "simulation", multiarm_method = "top2")
 #'
 #' @export
 analyze_brar_trial <- function(
@@ -122,6 +120,8 @@ analyze_brar_trial <- function(
     warning("Wald test may not be appropriate for BRAR data. Consider 'randomization', 'simulation', or 'AP'.")
   if (CI_method == "wald")
     warning("Wald confidence intervals may not be appropriate for BRAR data. Consider 'simulation' CIs.")
+
+
 
   # --- Dispatch to correct helper based on distribution ---
   results = switch(
