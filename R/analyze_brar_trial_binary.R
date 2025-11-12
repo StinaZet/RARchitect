@@ -100,16 +100,17 @@
   alternative_str = if (onesided) { if (direction == "higher") "greater" else "less" } else "two.sided"
   conf_level = if (onesided) 1 - alpha_adj else 1 - alpha_adj / 2
 
+  args = list(...)
+  args$tuning = ifelse(!"tuning" %in% names(args), 1, args$tuning)
+  args$clipping = ifelse(!"clipping" %in% names(args), 0, args$clipping)
+  args$burnin = ifelse(!"burnin" %in% names(args), 0, args$burnin)
+  args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
+  args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), NULL, args$urn_alpha)
+
   # --- Simulation-based or randomization tests ---
   if (test_method %in% c("AP", "simulation", "randomization")) {
 
     if (test_method == "AP") {
-      args = list(...)
-      args$tuning = ifelse(!"tuning" %in% names(args), 1, args$tuning)
-      args$clipping = ifelse(!"clipping" %in% names(args), 0, args$clipping)
-      args$burnin = ifelse(!"burnin" %in% names(args), 0, args$burnin)
-      args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
-
       test_results_df$p_value = ap_test_brar(
         trial_data = trial_data,
         priors = priors,
@@ -136,8 +137,11 @@
         alternative = alternative_str, B = B)
     } else if (test_method == "randomization") {
       test_results_df$p_value = randomization_test_brar(
-        trial_data = trial_data, priors = priors, B = B,
-        direction = direction, arms_to_test = arms_to_test, ...)
+        trial_data = trial_data, priors = priors, blocksize = args$blocksize,
+        postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
+        randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
+        clipping = args$clipping, B = B, alternative = alternative_str,
+        arms_to_test = arms_to_test)
     }
 
   } else {
