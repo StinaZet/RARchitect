@@ -86,6 +86,15 @@
     arms_to_test = c(estimated_best_exp_arm)
   }
 
+  if(effect_measure == "riskdifference")
+  {
+    effect = arm_estimates[arms_to_test] - arm_estimates[1]
+  } else if(effect_measure == "riskratio"){
+    effect = arm_estimates[arms_to_test] / arm_estimates[1]
+  } else if(effect_measure == "oddsratio"){
+    effect = (arm_estimates[arms_to_test] * (1 - arm_estimates[arms_to_test])) / (arm_estimates[1] * (1 - arm_estimates[1]))
+  }
+
   # --- Initialize result dataframe ---
   test_results_df = data.frame(
     ExperimentalArm = arms_to_test,
