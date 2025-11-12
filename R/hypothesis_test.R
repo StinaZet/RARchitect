@@ -63,6 +63,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
                                                   urn_alpha = urn_alpha, return = "allocations")
     }
 
+    # Calculate the test statistic for all arms (even if the arm will not be tested).
     for (jjj in 2:arms)
     {
       # For the Wald statistic for the re-randomized datasets for all arms.
