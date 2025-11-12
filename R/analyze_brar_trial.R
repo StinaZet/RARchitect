@@ -7,23 +7,27 @@
 #' Returns estimated treatment effects, p-values, and confidence intervals.
 #' Also reports patient benefit (number of patients on the estimated best arm).
 #'
+#' @param outcome_type Character. Specifies the type of outcome to simulate.
+#' Must be either `"binary"` or `"cont"`.
+#' @param distribution Character. Specifies the distribution of the outcome.
+#' Must be either `"bernoulli"`, `"normal"`, or `"exponential"`.
 #' @param trial_data Data frame containing trial results.
 #'   Must include columns 'Arm' and 'Outcome'.
 #' @param N Total sample size.
 #' @param arms Number of treatment arms.
-#' @param direction "lower" or "higher" (indicates which outcome is favorable).
+#' @param direction `"lower"` or `"higher"` (indicates which outcome is favorable).
 #' @param priors Matrix of prior parameters for Bayesian estimation (2 x K for binary).
-#' @param distribution "bernoulli", "normal", or "exponential".
 #' @param known_var Logical, for normal outcomes with known variance.
-#' @param estimation_method "MLE", "IPW", or "post_mean" (for binary outcomes).
-#' @param test_method "wald", "exact", "randomization", "AP", or "simulation".
-#' @param CI_method "wald" or "simulation".
-#' @param effect_measure Currently only "riskdifference" supported for binary outcomes.
-#' @param multiple_tests Logical; if TRUE, test all experimental arms vs control with Bonferroni adjustment.
-#' @param onesided Logical; if TRUE, perform one-sided test.
+#' @param estimation_method `"MLE"`, `"IPW"`, or `"post_mean"`.
+#' @param test_method `"wald"`, `"exact"`, `"randomization"`, `"AP"`, or `"simulation"`.
+#' @param CI_method `"wald"` or `"simulation"`.
+#' @param effect_measure Currently only `"riskdifference"` supported.
+#' @param multiple_tests Logical; if `TRUE`, test all experimental arms vs control with Bonferroni adjustment.
+#' @param onesided Logical; if `TRUE`, perform one-sided test.
+#' @param B Number of simulations/permutations for simulation/randomization-based tests.
 #' @param alpha Significance level (used for CI and tests).
 #' @param prob_threshold Posterior probability threshold (for Bayesian decision rules).
-#' @param ... Additional arguments passed to test methods (e.g. `B`, `policy_file`, `randmethod`, `blocksize`, `postprobmethod`, `multiarm_method`).
+#' @param ... Additional arguments passed to test methods (e.g. `randmethod`, `blocksize`, `postprobmethod`, `multiarm_method`).
 #'
 #' @return A list with:
 #' \describe{
@@ -92,26 +96,26 @@
 #'   postprobmethod = "simulation", multiarm_method = "top2")
 #'
 #' @export
-analyze_brar_trial <- function(
-    trial_data, N, arms, direction, priors, distribution, known_var = NULL,
-    estimation_method = c("MLE", "IPW", "post_mean"),
-    test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-    CI_method = c("wald", "simulation"),
-    effect_measure = "riskdifference",
-    multiple_tests = FALSE, onesided = TRUE,
-    alpha = 0.05, prob_threshold = NULL, ...
-) {
+analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
+                               distribution = c("bernoulli", "normal", "exponential"),
+                               trial_data, N, arms, direction = c("lower", "higher"),
+                               priors, distribution, known_var = NULL,
+                               estimation_method = c("MLE", "IPW", "post_mean"),
+                               test_method = c("wald", "exact", "randomization", "AP", "simulation"),
+                               CI_method = c("wald", "simulation"),
+                               effect_measure = "riskdifference",
+                               multiple_tests = FALSE, onesided = TRUE,  B = 10000,
+                               alpha = 0.05, prob_threshold = NULL, ...) {
 
   # --- Validate arguments ---
-  distribution = match.arg(distribution, c("bernoulli", "normal", "exponential"))
-  direction = match.arg(direction, c("lower", "higher"))
-  estimation_method = match.arg(estimation_method, c("MLE", "IPW", "post_mean"))
-  test_method = match.arg(test_method, c("wald", "exact", "randomization", "AP", "simulation"))
-  CI_method = match.arg(CI_method, c("wald", "simulation"))
+  outcome_type = match.arg(outcome_type)
+  distribution = match.arg(distribution)
+  direction = match.arg(direction)
+  estimation_method = match.arg(estimation_method)
+  test_method = match.arg(test_method)
+  CI_method = match.arg(CI_method)
+  effect_measure = match.arg(effect_measure)
 
-  if (distribution == "bernoulli") {
-    effect_measure = match.arg(effect_measure, c("riskdifference"))
-  }
 
   # --- Method warnings for BRAR data ---
   if (estimation_method == "MLE")
