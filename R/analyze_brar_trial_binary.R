@@ -33,12 +33,6 @@
     alpha = 0.05, multiple_tests = FALSE, onesided = TRUE, B = 10000, ...
 ) {
 
-  # --- Match and validate arguments ---
-  estimation_method = match.arg(estimation_method)
-  test_method = match.arg(test_method)
-  CI_method = match.arg(CI_method)
-  effect_measure = match.arg(effect_measure, c("riskdifference"))
-  direction = match.arg(direction, c("higher", "lower"))
 
   # Bonferroni adjustment for multiple tests
   alpha_adj = if (multiple_tests) alpha / (arms - 1) else alpha
