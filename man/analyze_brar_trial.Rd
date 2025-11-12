@@ -5,12 +5,13 @@
 \title{Analyze a Single BRAR Trial}
 \usage{
 analyze_brar_trial(
+  outcome_type = c("binary", "cont"),
+  distribution = c("bernoulli", "normal", "exponential"),
   trial_data,
   N,
   arms,
-  direction,
+  direction = c("lower", "higher"),
   priors,
-  distribution,
   known_var = NULL,
   estimation_method = c("MLE", "IPW", "post_mean"),
   test_method = c("wald", "exact", "randomization", "AP", "simulation"),
@@ -18,12 +19,19 @@ analyze_brar_trial(
   effect_measure = "riskdifference",
   multiple_tests = FALSE,
   onesided = TRUE,
+  B = 10000,
   alpha = 0.05,
   prob_threshold = NULL,
   ...
 )
 }
 \arguments{
+\item{outcome_type}{Character. Specifies the type of outcome to simulate.
+Must be either \code{"binary"} or \code{"cont"}.}
+
+\item{distribution}{Character. Specifies the distribution of the outcome.
+Must be either \code{"bernoulli"}, \code{"normal"}, or \code{"exponential"}.}
+
 \item{trial_data}{Data frame containing trial results.
 Must include columns 'Arm' and 'Outcome'.}
 
@@ -31,31 +39,31 @@ Must include columns 'Arm' and 'Outcome'.}
 
 \item{arms}{Number of treatment arms.}
 
-\item{direction}{"lower" or "higher" (indicates which outcome is favorable).}
+\item{direction}{\code{"lower"} or \code{"higher"} (indicates which outcome is favorable).}
 
 \item{priors}{Matrix of prior parameters for Bayesian estimation (2 x K for binary).}
 
-\item{distribution}{"bernoulli", "normal", or "exponential".}
-
 \item{known_var}{Logical, for normal outcomes with known variance.}
 
-\item{estimation_method}{"MLE", "IPW", or "post_mean" (for binary outcomes).}
+\item{estimation_method}{\code{"MLE"}, \code{"IPW"}, or \code{"post_mean"}.}
 
-\item{test_method}{"wald", "exact", "randomization", "AP", or "simulation".}
+\item{test_method}{\code{"wald"}, \code{"exact"}, \code{"randomization"}, \code{"AP"}, or \code{"simulation"}.}
 
-\item{CI_method}{"wald" or "simulation".}
+\item{CI_method}{\code{"wald"} or \code{"simulation"}.}
 
-\item{effect_measure}{Currently only "riskdifference" supported for binary outcomes.}
+\item{effect_measure}{Currently only \code{"riskdifference"} supported.}
 
-\item{multiple_tests}{Logical; if TRUE, test all experimental arms vs control with Bonferroni adjustment.}
+\item{multiple_tests}{Logical; if \code{TRUE}, test all experimental arms vs control with Bonferroni adjustment.}
 
-\item{onesided}{Logical; if TRUE, perform one-sided test.}
+\item{onesided}{Logical; if \code{TRUE}, perform one-sided test.}
+
+\item{B}{Number of simulations/permutations for simulation/randomization-based tests.}
 
 \item{alpha}{Significance level (used for CI and tests).}
 
 \item{prob_threshold}{Posterior probability threshold (for Bayesian decision rules).}
 
-\item{...}{Additional arguments passed to test methods (e.g. \code{B}, \code{policy_file}, \code{randmethod}, \code{blocksize}, \code{postprobmethod}, \code{multiarm_method}).}
+\item{...}{Additional arguments passed to test methods (e.g. \code{randmethod}, \code{blocksize}, \code{postprobmethod}, \code{multiarm_method}).}
 }
 \value{
 A list with:

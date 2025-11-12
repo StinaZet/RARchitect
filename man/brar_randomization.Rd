@@ -2,7 +2,7 @@
 % Please edit documentation in R/brar_randomization.R
 \name{brar_randomization}
 \alias{brar_randomization}
-\title{Generate Randomization Sequences for a BRAR Trial (Full)}
+\title{Generate Randomization Sequences for a BRAR Trial}
 \usage{
 brar_randomization(
   trial_data,
@@ -13,17 +13,17 @@ brar_randomization(
   multiarm_method = c("top2", "fixed"),
   tuning = 1,
   clipping = 0,
-  urn_alpha = 0,
+  urn_alpha = NULL,
   randmethod = c("coin", "block", "urn"),
   return = c("allocations", "probabilities")
 )
 }
 \arguments{
-\item{trial_data}{Data frame with columns 'Arm', 'Outcome', 'Batch'.}
+\item{trial_data}{Data frame with columns 'Arm', 'Outcome', and 'Batch'.}
 
 \item{priors}{2 x K matrix of alpha/beta parameters for each arm.}
 
-\item{blocksize}{Numeric. Block size used in the BRAR trial.}
+\item{blocksize}{Numeric. Block size for the next block in the BRAR trial.}
 
 \item{direction}{Character. "higher" or "lower".}
 

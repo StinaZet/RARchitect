@@ -8,9 +8,10 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
   blocks = max(trial_data$Batch)
   control_outcome = trial_data$Outcome[trial_data$Arm == 1]
   n_control = length(control_outcome)
+  arms = max(trial_data$Arms)
 
   # For storing.
-  perm_stats = matrix(NA, nrow = B, ncol = max(trial_data$Arm) - 1)
+  perm_stats = matrix(NA, nrow = B, ncol = arms - 1)
   p_values = numeric(length(arms_to_test))
 
 
@@ -62,14 +63,14 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
                                                   urn_alpha = urn_alpha, return = "allocations")
     }
 
-    for (jjj in 2:max[trial_data$Arms])
+    for (jjj in 2:arms)
     {
       # For the Wald statistic for the re-randomized datasets for all arms.
       p1 = mean(trial_perm$Outcome[trial_perm$Arm == jjj])
       p0 = mean(trial_perm$Outcome[trial_perm$Arm == 1])
       n1 = length(trial_perm$Arm[trial_perm$Arm==jjj])
       n0 = length(trial_perm$Arm[trial_perm$Arm==1])
-      se = sqrt(p1 * (1 - p1) / n_1 + p0 * (1 - p0) / n_0)
+      se = sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
 
       perm_stats[bbb, jjj - 1] = (p1 - p0) / se
     }

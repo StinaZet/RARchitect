@@ -16,7 +16,7 @@
 #' @param return Character. Either "allocations" (default) or "probabilities".
 #' @return Either a vector of randomized allocations or a matrix of allocation probabilities.
 #' @export
-brar_randomization_ <- function(
+brar_randomization <- function(
     trial_data, priors, blocksize, direction = c("higher", "lower"),
     postprobmethod = c("simulation", "exact"), multiarm_method = c("top2", "fixed"),
     tuning = 1, clipping = 0, urn_alpha = NULL, randmethod = c("coin", "block", "urn"),
@@ -135,20 +135,20 @@ brar_randomization_ <- function(
 
   # Randomization
   if (randmethod == "coin") {
-    allocations = sample(1:arms, block_size, prob = alloc_probs_tuned, replace = TRUE)
+    allocations = sample(1:arms, blocksize, prob = alloc_probs_tuned, replace = TRUE)
   } else if (randmethod == "block") {
-    counts = floor(alloc_probs_tuned * block_size)
-    remainder = block_size - sum(counts)
+    counts = floor(alloc_probs_tuned * blocksize)
+    remainder = blocksize - sum(counts)
     if (remainder > 0) {
-      frac_parts = alloc_probs_tuned - counts / block_size
+      frac_parts = alloc_probs_tuned - counts / blocksize
       add_idx = sample(1:arms, remainder, prob = frac_parts, replace = FALSE)
       counts = counts + tabulate(add_idx, nbins = arms)
     }
     alloc_vector = rep(1:arms, counts)
-    allocations = sample(alloc_vector, block_size)
+    allocations = sample(alloc_vector, blocksize)
   } else if (randmethod == "urn") {
     count_in_block = rep(0, arms)
-    for (i in 1:block_size) {
+    for (i in 1:blocksize) {
       weights = pmax(urn_alpha * alloc_probs_tuned + (i-1) * alloc_probs_tuned - count_in_block, 1)
       prob_now = weights / sum(weights)
       draw = sample(1:arms, 1, prob = prob_now)
