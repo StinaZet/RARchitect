@@ -99,7 +99,7 @@
 analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
                                distribution = c("bernoulli", "normal", "exponential"),
                                trial_data, N, arms, direction = c("lower", "higher"),
-                               priors, distribution, known_var = NULL,
+                               priors, known_var = NULL,
                                estimation_method = c("MLE", "IPW", "post_mean"),
                                test_method = c("wald", "exact", "randomization", "AP", "simulation"),
                                CI_method = c("wald", "simulation"),

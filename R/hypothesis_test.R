@@ -1,29 +1,98 @@
 # Randomization-based hypothesis test.
-randomization_test_brar <- function(trial_data, priors, blocksize, arms_to_test = 2:ncol(priors),
-                                    direction = "higher", B = 10000) {
+randomization_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
+                                    multiarm_method, tuning, clipping, randmethod,
+                                    urn_alpha, burnin, alternative, arms_to_test, B = 10000) {
+
+  # Extract things from the dataset.
+  N = length(trial_data$Outcome)
+  blocks = max(trial_data$Batch)
   control_outcome = trial_data$Outcome[trial_data$Arm == 1]
   n_control = length(control_outcome)
+
+  # For storing.
+  perm_stats = matrix(NA, nrow = B, ncol = max(trial_data$Arm) - 1)
   p_values = numeric(length(arms_to_test))
 
-  for (i in seq_along(arms_to_test)) {
+
+  # Loop over all the re-rendomizations.
+  for (bbb in 1:B)
+  {
+    # Create the permuted dataset.
+    trial_perm = trial_data
+
+    # Start by re-randomizing the burnin.
+    if (burnin > 0 && burnin <= N) {
+      burnin_idx = 1:burnin
+
+      # Generate roughly balanced allocation
+      full_cycles = floor(burnin / arms) # Number of full cycles
+      remainder = burnin %% arms # Leftover participants
+
+      # Repeat each arm for full cycles
+      arm_assignments = rep(1:arms, times = full_cycles)
+
+      # Add remaining participants randomly among the arms
+      if (remainder > 0) {
+        arm_assignments = c(arm_assignments, sample(1:arms, remainder))
+      }
+
+      # Shuffle to avoid any ordering bias.
+      # Change the treatment assigments in the permuted dataset.
+      trial_perm$Arm[burnin_idx][burnin_idx] = sample(arm_assignments, burnin)
+
+      # Update the prior parameters.
+      current_alpha_params = priors[1, ]
+      current_beta_params = priors[2, ]
+
+      for(i in 1:arms) {
+        priors[1, i] = current_alpha_params[i] + sum(trial_perm$Outcome[trial_perm$Arm[burnin_idx] == i])
+        priors[2, i] = current_beta_params[i] + sum(trial_perm$Arm[burnin_idx] == i) - sum(trial_perm$Outcome[trial_perm$Arm[burnin_idx] == i])
+      }
+    }
+
+    # Re-randomize the rest of the trial, block by block.
+    for (lll in 1:blocks)
+    {
+      index1 = 1:burnin + lll
+      index2 = burnin + lll: burnin + blocksize + lll
+      trial_perm$Arm[index2] = brar_randomization(trial_data = trial_perm[index1, ], priors = priors,
+                                                  blocksize = blocksize, postprobmethod = postprobmethod,
+                                                  multiarm_method = multiarm_method, tuning = tuning,
+                                                  clipping = clipping, randmethod = randmethod,
+                                                  urn_alpha = urn_alpha, return = "allocations")
+    }
+
+    for (jjj in 2:max[trial_data$Arms])
+    {
+      # For the Wald statistic for the re-randomized datasets for all arms.
+      p1 = mean(trial_perm$Outcome[trial_perm$Arm == jjj])
+      p0 = mean(trial_perm$Outcome[trial_perm$Arm == 1])
+      n1 = length(trial_perm$Arm[trial_perm$Arm==jjj])
+      n0 = length(trial_perm$Arm[trial_perm$Arm==1])
+      se = sqrt(p1 * (1 - p1) / n_1 + p0 * (1 - p0) / n_0)
+
+      perm_stats[bbb, jjj - 1] = (p1 - p0) / se
+    }
+  }
+
+  for (i in seq_along(arms_to_test))
+  {
     k = arms_to_test[i]
     exp_outcome = trial_data$Outcome[trial_data$Arm == k]
     n_exp = length(exp_outcome)
 
-    p_obs = mean(exp_outcome) - mean(control_outcome)
-    perm_stats = numeric(B)
-    for (b in 1:B) {
-      trial_perm = trial_data
-      trial_perm$Arm = brar_randomization(trial_data, priors, blocksize, return = "allocations")
-      perm_exp = trial_perm$Outcome[trial_perm$Arm == k]
-      perm_control = trial_perm$Outcome[trial_perm$Arm == 1]
-      perm_stats[b] = mean(perm_exp) - mean(perm_control)
-    }
+    p1obs = mean(exp_outcome)
+    p0obs = mean(control_outcome)
+    seObs = sqrt(p1obs * (1 - p1obs) / n_exp + p0obs * (1 - p0obs) / n_control)
 
-    if (direction == "higher") {
-      p_values[i] = mean(perm_stats >= p_obs)
-    } else {
-      p_values[i] = mean(perm_stats <= p_obs)
+    p_obs = (p1obs - p0obs) / seObs
+
+    if (alternative == "greater") {
+      p_values[i] = mean(perm_stats[,i] >= p_obs)
+    } else if(alternative == "less") {
+      p_values[i] = mean(perm_stats[,i] <= p_obs)
+    } else if (alternative == "two.sided") {
+      p_values[i] = mean(abs(perm_stats[,i]) >= abs(p_obs))
     }
   }
 

@@ -140,7 +140,7 @@
         trial_data = trial_data, priors = priors, blocksize = args$blocksize,
         postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
         randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
-        clipping = args$clipping, B = B, alternative = alternative_str,
+        clipping = args$clipping, burnin = args$burnin, B = B, alternative = alternative_str,
         arms_to_test = arms_to_test)
     }
 
