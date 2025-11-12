@@ -98,7 +98,7 @@
   # --- Initialize result dataframe ---
   test_results_df = data.frame(
     ExperimentalArm = arms_to_test,
-    effect_estimate = arm_estimates[arms_to_test] - arm_estimates[1],
+    effect_estimate = effect,
     p_value = NA_real_,
     ci_low = NA_real_,
     ci_high = NA_real_
