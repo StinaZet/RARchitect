@@ -134,6 +134,6 @@ analyze_brar_trial(outcome_type = "binary",
   estimation_method = "IPW",
   test_method = "AP", CI_method = "simulation",
   randmethod = "coin", blocksize = 1, B = 10,
-  postprobmethod = "simulation", multiarm_method = "top2")
+  postprobmethod = "simulation")
 
 }
