@@ -1,7 +1,8 @@
 # Randomization-based hypothesis test.
 randomization_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
                                     multiarm_method, tuning, clipping, randmethod,
-                                    urn_alpha, burnin, alternative, arms_to_test, B = 10000) {
+                                    urn_alpha, burnin, direction, alternative,
+                                    arms_to_test, B = 10000) {
 
   # Extract things from the dataset.
   N = length(trial_data$Outcome)
@@ -59,7 +60,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
       trial_perm$Arm[index2] = brar_randomization(trial_data = trial_perm[index1, ], priors = priors,
                                                   blocksize = blocksize, postprobmethod = postprobmethod,
                                                   multiarm_method = multiarm_method, tuning = tuning,
-                                                  clipping = clipping, randmethod = randmethod,
+                                                  clipping = clipping, randmethod = randmethod, direction = direction,
                                                   urn_alpha = urn_alpha, return = "allocations")
     }
 
@@ -77,6 +78,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
     }
   }
 
+  # Compute the values of the test statistics and p-values for the observed data.
   for (i in seq_along(arms_to_test))
   {
     k = arms_to_test[i]
@@ -104,33 +106,69 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
 
 
 # Monte Carlo Simulation Test for Multiple Arms
-monte_carlo_test_brar <- function(y_c, n_c, y_e_list, n_e_list, alternative, B = 10000) {
-  n_arms = length(y_e_list)
-  p_values = numeric(n_arms)
+monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
+                                  multiarm_method, tuning, clipping, randmethod,
+                                  urn_alpha, burnin, alternative, arms_to_test,
+                                  direction, B = 10000){
 
-  for (i in seq_len(n_arms)) {
-    y_e = y_e_list[[i]]
-    n_e = n_e_list[[i]]
+  # Extract things from the dataset.
+  N = length(trial_data$Outcome)
+  blocks = max(trial_data$Batch)
+  control_outcome = trial_data$Outcome[trial_data$Arm == 1]
+  n_control = length(control_outcome)
+  arms = max(trial_data$Arms)
 
-    # Observed statistic (risk difference)
-    T_obs = y_e / n_e - y_c / n_c
+  # For storing.
+  mc_stats = matrix(NA, nrow = B, ncol = arms - 1)
+  p_values = numeric(length(arms_to_test))
 
-    # Pooled proportion under H0 (no difference)
-    pooled_p = (y_c + y_e) / (n_c + n_e)
+  for (bbb in 1:B)
+  {
+    # Simulate the new datasets with the pooled mean as the model parameters.
+    mc_data = simulate_brar_trial(outcome_type = c("binary"),
+                                  distribution = c("bernoulli"),
+                                  arms = arms, N = N, blocksize = blocksize,
+                                  priors = priors, modelpar = rep(mean(trial_data$Outcome), arms),
+                                  direction = direction, randmethod = randmethod,
+                                  tuning = tuning, clipping = clipping,
+                                  postprobmethod = postprobmethod,
+                                  multiarm_method = multiarm_method,
+                                  recruitment_rate = 100000,
+                                  observation_delay = 0,...)
 
-    # Simulate under H0 using pooled probability
-    y_c_sim = stats::rbinom(B, n_c, pooled_p)
-    y_e_sim = stats::rbinom(B, n_e, pooled_p)
-    T_sim = y_e_sim / n_e - y_c_sim / n_c
+    # Calculate the test statistic for all arms (even if the arm will not be tested).
+    for (jjj in 2:arms)
+    {
+      # For the Wald statistic for the re-randomized datasets for all arms.
+      p1 = mean(mc_data$Outcome[mc_data$Arm == jjj])
+      p0 = mean(mc_data$Outcome[mc_data$Arm == 1])
+      n1 = length(mc_data$Arm[mc_data$Arm==jjj])
+      n0 = length(mc_data$Arm[mc_data$Arm==1])
+      se = sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
 
-    # Compute p-value depending on alternative
+      mc_stats[bbb, jjj - 1] = (p1 - p0) / se
+    }
+  }
+
+  # Compute the values of the test statistics and p-values for the observed data.
+  for (i in seq_along(arms_to_test))
+  {
+    k = arms_to_test[i]
+    exp_outcome = trial_data$Outcome[trial_data$Arm == k]
+    n_exp = length(exp_outcome)
+
+    p1obs = mean(exp_outcome)
+    p0obs = mean(control_outcome)
+    seObs = sqrt(p1obs * (1 - p1obs) / n_exp + p0obs * (1 - p0obs) / n_control)
+
+    p_obs = (p1obs - p0obs) / seObs
+
     if (alternative == "greater") {
-      p_values[i] = mean(T_sim >= T_obs)
-    } else if (alternative == "less") {
-      p_values[i] = mean(T_sim <= T_obs)
+      p_values[i] = mean(mc_stats[,i] >= p_obs)
+    } else if(alternative == "less") {
+      p_values[i] = mean(mc_stats[,i] <= p_obs)
     } else if (alternative == "two.sided") {
-      # Two-sided: based on absolute deviation
-      p_values[i] = mean(abs(T_sim) >= abs(T_obs))
+      p_values[i] = mean(abs(mc_stats[,i]) >= abs(p_obs))
     }
   }
 
@@ -189,8 +227,7 @@ ap_test_brar <- function(
       postprobmethod = postprobmethod,
       multiarm_method = multiarm_method,
       recruitment_rate = 100000,
-      observation_delay = 0,...
-    )
+      observation_delay = 0,...)
 
     for (i in seq_along(arms_to_test)) {
       k = arms_to_test[i]

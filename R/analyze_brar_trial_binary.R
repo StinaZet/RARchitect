@@ -140,17 +140,18 @@
         N = N)$p_values
     } else if (test_method == "simulation") {
       test_results_df$p_value = monte_carlo_test_brar(
-        y_c = y_c, n_c = n_c,
-        y_e_list = lapply(arms_to_test, function(k) arm_summary[[k]]$y),
-        n_e_list = lapply(arms_to_test, function(k) arm_summary[[k]]$n),
-        alternative = alternative_str, B = B)
+        trial_data = trial_data, priors = priors, blocksize = args$blocksize,
+        postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
+        randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
+        clipping = args$clipping, burnin = args$burnin, B = B, alternative = alternative_str,
+        arms_to_test = arms_to_test, direction = args$direction)
     } else if (test_method == "randomization") {
       test_results_df$p_value = randomization_test_brar(
         trial_data = trial_data, priors = priors, blocksize = args$blocksize,
         postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
         randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
         clipping = args$clipping, burnin = args$burnin, B = B, alternative = alternative_str,
-        arms_to_test = arms_to_test)
+        arms_to_test = arms_to_test, direction = args$direction)
     }
 
   } else {
