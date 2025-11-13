@@ -30,9 +30,7 @@
     test_method = c("wald", "exact", "randomization", "AP", "simulation"),
     CI_method = c("wald", "simulation"),
     effect_measure = "riskdifference",
-    alpha = 0.05, multiple_tests = FALSE, onesided = TRUE, B = 10000, ...
-) {
-
+    alpha = 0.05, multiple_tests = FALSE, onesided = TRUE, B = 10000, ...) {
 
   # Bonferroni adjustment for multiple tests
   alpha_adj = if (multiple_tests) alpha / (arms - 1) else alpha
@@ -116,7 +114,8 @@
   args$clipping = ifelse(!"clipping" %in% names(args), 0, args$clipping)
   args$burnin = ifelse(!"burnin" %in% names(args), 0, args$burnin)
   args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
-  args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), NULL, args$urn_alpha)
+  args$postprobmethod = ifelse(!"postprobmethod" %in% names(args), "simulation", args$postprobmethod)
+  args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), 0, args$urn_alpha)
 
   # --- Simulation-based or randomization tests ---
   if (test_method %in% c("AP", "simulation", "randomization")) {

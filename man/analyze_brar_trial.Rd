@@ -89,7 +89,7 @@ Also reports patient benefit (number of patients on the estimated best arm).
 }
 }
 \examples{
-# --- Example setup: simulate a BRAR trial with multiarm_method = "top2" ---
+# --- Example setup: simulate a BRAR trial ---
 set.seed(103)
 results_binary_multiarm = simulate_brar_trial(
   outcome_type = "binary",
@@ -103,42 +103,37 @@ results_binary_multiarm = simulate_brar_trial(
   randmethod = "coin",
   postprobmethod = "simulation",
   recruitment_rate = 8,
-  observation_delay = 20
-)
+  observation_delay = 20)
 
 # --- Example 1: Simulation-based test ---
-analyze_brar_trial(
+analyze_brar_trial(outcome_type = "binary",
   trial_data = results_binary_multiarm,
-  N = 150, arms = 3,
-  direction = "higher",
-  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
-  distribution = "bernoulli",
-  estimation_method = "post_mean",
+  N = 150, arms = 3, direction = "higher",
+  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+  distribution = "bernoulli", burnin = 15,
+  postprobmethod = "simulation",
+  blocksize = 1, estimation_method = "IPW",
   test_method = "simulation", CI_method = "simulation",
-  B = 2000
-)
+  B = 10)
 
 # --- Example 2: Wald test (not recommended for BRAR) ---
-analyze_brar_trial(
+analyze_brar_trial(outcome_type = "binary",
   trial_data = results_binary_multiarm,
-  N = 150, arms = 3,
-  direction = "higher",
-  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
-  distribution = "bernoulli",
+  N = 150, arms = 3, direction = "higher",
+  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+  distribution = "bernoulli", postprobmethod = "simulation",
   estimation_method = "MLE",
-  test_method = "wald", CI_method = "wald"
-)
+  test_method = "wald", CI_method = "wald")
 
 # --- Example 3: AP test (Allocation-Probability test) ---
-analyze_brar_trial(
+analyze_brar_trial(outcome_type = "binary",
   trial_data = results_binary_multiarm,
-  N = 150, arms = 3,
-  direction = "higher",
-  priors = matrix(c(1,1,1,1,1,1), nrow = 2),
-  distribution = "bernoulli",
+  N = 150, arms = 3, direction = "higher",
+  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+  distribution = "bernoulli", postprobmethod = "simulation",
   estimation_method = "IPW",
   test_method = "AP", CI_method = "simulation",
-  randmethod = "coin", blocksize = 1,
+  randmethod = "coin", blocksize = 1, B = 10,
   postprobmethod = "simulation", multiarm_method = "top2")
 
 }

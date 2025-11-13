@@ -2,14 +2,14 @@
 randomization_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
                                     multiarm_method, tuning, clipping, randmethod,
                                     urn_alpha, burnin, direction, alternative,
-                                    arms_to_test, B = 10000) {
+                                    arms_to_test, B, ...) {
 
   # Extract things from the dataset.
   N = length(trial_data$Outcome)
   blocks = max(trial_data$Batch)
   control_outcome = trial_data$Outcome[trial_data$Arm == 1]
   n_control = length(control_outcome)
-  arms = max(trial_data$Arms)
+  arms = max(trial_data$Arm)
 
   # For storing.
   perm_stats = matrix(NA, nrow = B, ncol = arms - 1)
@@ -109,14 +109,14 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
 monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
                                   multiarm_method, tuning, clipping, randmethod,
                                   urn_alpha, burnin, alternative, arms_to_test,
-                                  direction, B = 10000){
+                                  direction, B, ...){
 
   # Extract things from the dataset.
   N = length(trial_data$Outcome)
   blocks = max(trial_data$Batch)
   control_outcome = trial_data$Outcome[trial_data$Arm == 1]
   n_control = length(control_outcome)
-  arms = max(trial_data$Arms)
+  arms = max(trial_data$Arm)
 
   # For storing.
   mc_stats = matrix(NA, nrow = B, ncol = arms - 1)
@@ -134,7 +134,7 @@ monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
                                   postprobmethod = postprobmethod,
                                   multiarm_method = multiarm_method,
                                   recruitment_rate = 100000,
-                                  observation_delay = 0,...)
+                                  observation_delay = 0)
 
     # Calculate the test statistic for all arms (even if the arm will not be tested).
     for (jjj in 2:arms)
@@ -172,7 +172,7 @@ monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
     }
   }
 
-  names(p_values) = paste0("Arm", seq_len(n_arms))
+  names(p_values) = paste0("Arm", arms_to_test)
   return(p_values)
 }
 
@@ -183,10 +183,9 @@ monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
 ap_test_brar <- function(
     trial_data, priors, blocksize,
     direction = "higher", multiple_tests = FALSE,
-    onesided = TRUE, alpha = 0.05, B = 10000, modelpar,
+    onesided = TRUE, alpha = 0.05, B, modelpar,
     N = NULL,  randmethod = "coin", tuning = 1, clipping = 0,
-    postprobmethod = "simulation", multiarm_method, ...
-) {
+    postprobmethod = "simulation", multiarm_method, ...) {
 
   arms = length(unique(trial_data$Arm))
   if (is.null(N)) N = nrow(trial_data)
