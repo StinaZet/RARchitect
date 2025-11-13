@@ -106,75 +106,142 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
 
 
 # Monte Carlo Simulation Test for Multiple Arms
-monte_carlo_test_brar <- function(trial_data, priors, blocksize, postprobmethod,
-                                  multiarm_method, tuning, clipping, randmethod,
-                                  urn_alpha, burnin, alternative, arms_to_test,
-                                  direction, B, ...){
+# First function is for finding the null dsitribution.
+monte_carlo_null_brar = function(trial_data, priors, blocksize,
+                                 postprobmethod, multiarm_method,
+                                 tuning, clipping, randmethod,
+                                 urn_alpha, burnin, direction,
+                                 B, alpha) {
 
-  # Extract things from the dataset.
+  # --- Extract trial structure ---
   N = length(trial_data$Outcome)
-  blocks = max(trial_data$Batch)
-  control_outcome = trial_data$Outcome[trial_data$Arm == 1]
-  n_control = length(control_outcome)
   arms = max(trial_data$Arm)
 
-  # For storing.
+  # --- Storage ---
   mc_stats = matrix(NA, nrow = B, ncol = arms - 1)
-  p_values = numeric(length(arms_to_test))
 
-  for (bbb in 1:B)
-  {
-    # Simulate the new datasets with the pooled mean as the model parameters.
-    mc_data = simulate_brar_trial(outcome_type = c("binary"),
-                                  distribution = c("bernoulli"),
-                                  arms = arms, N = N, blocksize = blocksize,
-                                  priors = priors, modelpar = rep(mean(trial_data$Outcome), arms),
-                                  direction = direction, randmethod = randmethod,
-                                  tuning = tuning, clipping = clipping,
-                                  postprobmethod = postprobmethod,
-                                  multiarm_method = multiarm_method,
-                                  recruitment_rate = 100000,
-                                  observation_delay = 0)
+  # --- Simulate under null hypothesis ---
+  for (b in seq_len(B)) {
+    mc_data = simulate_brar_trial(
+      outcome_type = "binary",
+      distribution = "bernoulli",
+      arms = arms,
+      N = N,
+      blocksize = blocksize,
+      priors = priors,
+      modelpar = rep(mean(trial_data$Outcome), arms),  # pooled mean under H0
+      direction = direction,
+      randmethod = randmethod,
+      tuning = tuning,
+      clipping = clipping,
+      postprobmethod = postprobmethod,
+      multiarm_method = multiarm_method,
+      recruitment_rate = 100000,
+      observation_delay = 0
+    )
 
-    # Calculate the test statistic for all arms (even if the arm will not be tested).
-    for (jjj in 2:arms)
-    {
-      # For the Wald statistic for the re-randomized datasets for all arms.
-      p1 = mean(mc_data$Outcome[mc_data$Arm == jjj])
+    # --- Compute Wald test statistic for each experimental arm ---
+    for (k in 2:arms) {
+      p1 = mean(mc_data$Outcome[mc_data$Arm == k])
       p0 = mean(mc_data$Outcome[mc_data$Arm == 1])
-      n1 = length(mc_data$Arm[mc_data$Arm==jjj])
-      n0 = length(mc_data$Arm[mc_data$Arm==1])
+      n1 = sum(mc_data$Arm == k)
+      n0 = sum(mc_data$Arm == 1)
       se = sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
-
-      mc_stats[bbb, jjj - 1] = (p1 - p0) / se
+      mc_stats[b, k - 1] = (p1 - p0) / se
     }
   }
 
-  # Compute the values of the test statistics and p-values for the observed data.
-  for (i in seq_along(arms_to_test))
-  {
-    k = arms_to_test[i]
-    exp_outcome = trial_data$Outcome[trial_data$Arm == k]
-    n_exp = length(exp_outcome)
+  # --- Compute null critical values for chosen alpha ---
+  crit_values = list(
+    greater = apply(mc_stats, 2, stats::quantile, probs = 1 - alpha, na.rm = TRUE),
+    less = apply(mc_stats, 2, stats::quantile, probs = alpha, na.rm = TRUE),
+    two.sided = apply(mc_stats, 2, function(x)
+      stats::quantile(abs(x), probs = 1 - alpha / 2, na.rm = TRUE))
+  )
 
-    p1obs = mean(exp_outcome)
-    p0obs = mean(control_outcome)
-    seObs = sqrt(p1obs * (1 - p1obs) / n_exp + p0obs * (1 - p0obs) / n_control)
-
-    p_obs = (p1obs - p0obs) / seObs
-
-    if (alternative == "greater") {
-      p_values[i] = mean(mc_stats[,i] >= p_obs)
-    } else if(alternative == "less") {
-      p_values[i] = mean(mc_stats[,i] <= p_obs)
-    } else if (alternative == "two.sided") {
-      p_values[i] = mean(abs(mc_stats[,i]) >= abs(p_obs))
-    }
-  }
-
-  names(p_values) = paste0("Arm", arms_to_test)
-  return(p_values)
+  return(list(
+    mc_stats = mc_stats,
+    crit_values = crit_values,
+    alpha = alpha
+  ))
 }
+
+# Second function is for performing the test.
+monte_carlo_test_brar = function(trial_data, arms_to_test, critval = NULL,
+                                 alternative, null_distribution = NULL) {
+
+
+  # If the critical value is given, just compute the test decision.
+  if(is.numeric(critval))
+  {
+    test_results = numeric(length(arms_to_test))
+
+    for (i in seq_along(arms_to_test)) {
+      # Compute the observed test statistic.
+      k = arms_to_test[i]
+      exp_outcome = trial_data$Outcome[trial_data$Arm == k]
+      n_exp = length(exp_outcome)
+
+      p1obs = mean(exp_outcome)
+      p0obs = mean(control_outcome)
+      seObs = sqrt(p1obs * (1 - p1obs) / n_exp + p0obs * (1 - p0obs) / n_control)
+      T_obs = (p1obs - p0obs) / seObs
+
+      # --- Compute test results from empirical critical values ---
+      if (alternative == "greater") {
+        test_results[i] = ifelse(T_obs >= critval[i], 1, 0)
+      } else if (alternative == "less") {
+        test_results[i] = ifelse(T_obs <= critval[i], 1, 0)
+      } else if (alternative == "two.sided") {
+        test_results[i] = ifelse(abs(T_obs) >= critval[i], 1, 0)
+      }
+    }
+
+    names(test_results) = paste0("Arm", arms_to_test)
+
+    return(list(test_results = test_results, critval = critval))
+  } else{ # Compute p-values with the full null distribution.
+    mc_stats = null_distribution$mc_stats
+    crit_values = null_distribution$crit_values
+    alpha = null_distribution$alpha
+
+    # --- Extract control arm data ---
+    control_outcome = trial_data$Outcome[trial_data$Arm == 1]
+    n_control = length(control_outcome)
+
+    # --- Compute observed test statistics ---
+    p_values = numeric(length(arms_to_test))
+    critval = numeric(length(arms_to_test))
+
+    for (i in seq_along(arms_to_test)) {
+      k = arms_to_test[i]
+      exp_outcome = trial_data$Outcome[trial_data$Arm == k]
+      n_exp = length(exp_outcome)
+
+      p1obs = mean(exp_outcome)
+      p0obs = mean(control_outcome)
+      seObs = sqrt(p1obs * (1 - p1obs) / n_exp + p0obs * (1 - p0obs) / n_control)
+      T_obs = (p1obs - p0obs) / seObs
+
+      # --- Compute p-values from empirical null distribution ---
+      if (alternative == "greater") {
+        p_values[i] = mean(mc_stats[, i] >= T_obs)
+        critval[i] = crit_values$greater
+      } else if (alternative == "less") {
+        p_values[i] = mean(mc_stats[, i] <= T_obs)
+        critval[i] = crit_values$less
+      } else if (alternative == "two.sided") {
+        p_values[i] = mean(abs(mc_stats[, i]) >= abs(T_obs))
+        critval[i] = crit_values$two.sided
+      }
+    }
+
+    names(p_values) = paste0("Arm", arms_to_test)
+
+    return(list(p_values = p_values, critval = critval, alpha = alpha))
+  }
+}
+
 
 
 

@@ -16,6 +16,8 @@
 #' @param alpha Significance level for CI calculation.
 #' @param multiple_tests Logical; if TRUE, all experimental arms vs control.
 #' @param onesided Logical; if TRUE, one-sided test.
+#' @param critval Numerical. if the critical value for the simulation-based test is known it can be specified here.
+#' If it is unknown, leave it for `NULL` and the critical value is calculated in the function.
 #' @param B Number of simulations/permutations for simulation/randomization-based tests.
 #' @param ... Additional arguments passed to test methods.
 #'
@@ -29,8 +31,8 @@
     estimation_method = c("MLE", "IPW", "post_mean"),
     test_method = c("wald", "exact", "randomization", "AP", "simulation"),
     CI_method = c("wald", "simulation"),
-    effect_measure = "riskdifference",
-    alpha = 0.05, multiple_tests = FALSE, onesided = TRUE, B = 10000, ...) {
+    effect_measure = "riskdifference", alpha = 0.05, multiple_tests = FALSE,
+    onesided = TRUE, critval = NULL, B = 10000, ...) {
 
   # Bonferroni adjustment for multiple tests
   alpha_adj = if (multiple_tests) alpha / (arms - 1) else alpha
@@ -140,12 +142,48 @@
         B = B,
         N = N)$p_values
     } else if (test_method == "simulation") {
-      test_results_df$p_value = monte_carlo_test_brar(
-        trial_data = trial_data, priors = priors, blocksize = args$blocksize,
-        postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
-        randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
-        clipping = args$clipping, burnin = args$burnin, B = B, alternative = alternative_str,
-        arms_to_test = arms_to_test, direction = args$direction)
+      # Just compute the test result if a critical value is specified
+      if(is.numeric(critval))
+      {
+        test_results_mc = monte_carlo_test_brar(
+          trial_data = trial_data,
+          critval = critval,
+          alternative = alternative_str,
+          arms_to_test = arms_to_test)
+
+        # The p-value of the test.
+        test_results_df$test_result = test_results_mc$test_result
+        # The critical value of the test.
+        test_results_df$critval = test_results_mc$critval
+      } else{ # Otherwise, compute the null dsitribution and p-values.
+        # Step 1: Generate Monte Carlo null distribution
+        mc_stats = monte_carlo_null_brar(
+          trial_data = trial_data,
+          priors = priors,
+          blocksize = args$blocksize,
+          postprobmethod = args$postprobmethod,
+          multiarm_method = args$multiarm_method,
+          tuning = args$tuning,
+          clipping = args$clipping,
+          randmethod = args$randmethod,
+          urn_alpha = args$urn_alpha,
+          burnin = args$burnin,
+          direction = args$direction,
+          B = B,
+          alpha = 1 - conf_level)
+
+        # Step 2: Compute p-values using the observed data and simulated null stats
+        test_results_mc = monte_carlo_test_brar(
+          trial_data = trial_data,
+          null_distribution = mc_stats,
+          alternative = alternative_str,
+          arms_to_test = arms_to_test)
+
+        # The p-value of the test.
+        test_results_df$p_value = test_results_mc$p_values
+        # The critical value of the test.
+        test_results_df$critval = test_results_mc$critval
+      }
     } else if (test_method == "randomization") {
       test_results_df$p_value = randomization_test_brar(
         trial_data = trial_data, priors = priors, blocksize = args$blocksize,

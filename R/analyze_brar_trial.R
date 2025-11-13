@@ -24,6 +24,8 @@
 #' @param effect_measure Currently only `"riskdifference"` supported.
 #' @param multiple_tests Logical; if `TRUE`, test all experimental arms vs control with Bonferroni adjustment.
 #' @param onesided Logical; if `TRUE`, perform one-sided test.
+#' @param critval Numerical. if the critical value for the simulation-based test is known it can be specified here.
+#' If it is unknown, leave it for `NULL` and the critical value is calculated in the function.
 #' @param B Number of simulations/permutations for simulation/randomization-based tests.
 #' @param alpha Significance level (used for CI and tests).
 #' @param prob_threshold Posterior probability threshold (for Bayesian decision rules).
@@ -99,7 +101,8 @@ analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
                                test_method = c("wald", "exact", "randomization", "AP", "simulation"),
                                CI_method = c("wald", "simulation"),
                                effect_measure = "riskdifference",
-                               multiple_tests = FALSE, onesided = TRUE,  B = 10000,
+                               multiple_tests = FALSE, onesided = TRUE,
+                               critval = NULL, B = 10000,
                                alpha = 0.05, prob_threshold = NULL, ...) {
 
   # --- Validate arguments ---

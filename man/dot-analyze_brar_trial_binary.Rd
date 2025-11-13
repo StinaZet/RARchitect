@@ -17,6 +17,7 @@
   alpha = 0.05,
   multiple_tests = FALSE,
   onesided = TRUE,
+  critval = NULL,
   B = 10000,
   ...
 )
@@ -45,6 +46,9 @@
 \item{multiple_tests}{Logical; if TRUE, all experimental arms vs control.}
 
 \item{onesided}{Logical; if TRUE, one-sided test.}
+
+\item{critval}{Numerical. if the critical value for the simulation-based test is known it can be specified here.
+If it is unknown, leave it for NULL and the critical value is calculated in the function.}
 
 \item{B}{Number of simulations/permutations for simulation/randomization-based tests.}
 
