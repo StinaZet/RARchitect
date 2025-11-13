@@ -116,6 +116,50 @@ analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
   CI_method = match.arg(CI_method)
   effect_measure = match.arg(effect_measure)
 
+  # Error messages for the column names in the trial_data dataset.
+  required_cols = c("Outcome", "Arm")
+  missing_cols = setdiff(required_cols, names(trial_data))
+  if (length(missing_cols) > 0) {
+    stop(
+      paste0(
+        "The input dataset 'trial_data' is missing required column(s): ",
+        paste(missing_cols, collapse = ", "),
+        ".\nPlease ensure the dataset contains at least 'Outcome' and 'Arm' columns."
+      )
+    )
+  }
+
+  # Check that the columns with allocation probabilities are named correctly.
+  if (estimation_method == "IPW" || test_method == "AP" || CI_method == "IPW")
+  {
+    # Check for correct 'AP arm X' column naming
+    ap_cols = grep("^AP arm [0-9]+$", names(trial_data), value = TRUE)
+
+    # Detect arms based on pattern
+    if (length(ap_cols) == 0) {
+      stop(
+        "No columns matching the pattern 'AP arm X' were found in 'trial_data'.\n",
+        "These columns are required for IPW estimation (allocation probabilities)."
+      )
+    }
+
+    # Check if we have an AP arm column for *each* arm
+    expected_ap_names = paste0("AP arm ", seq_len(arms))
+    missing_ap = setdiff(expected_ap_names, ap_cols)
+    if (length(missing_ap) > 0) {
+      stop(
+        paste0(
+          "Missing allocation probability columns: ",
+          paste(missing_ap, collapse = ", "),
+          ".\nExpected columns: ",
+          paste(expected_ap_names, collapse = ", "),
+          ".\nPlease ensure the dataset contains one 'AP arm X' column for each arm."
+        )
+      )
+    }
+  }
+
+
 
   # --- Method warnings for BRAR data ---
   if (estimation_method == "MLE")

@@ -61,11 +61,13 @@
     }
 
     if (estimation_method == "MLE") {
+      # Standard MLE estimation.
       arm_estimates[k] = y_k / n_k
     } else if (estimation_method == "post_mean") {
+      # The posterior mean for estimation.
       arm_estimates[k] = (priors[1,k] + y_k) / (sum(priors[,k]) + n_k)
     } else if (estimation_method == "IPW") {
-      # Inverse probability weighting based on allocation probabilities
+      # Inverse probability weighting based on allocation probabilities.
       ap_cols = grep("^AP arm ", names(trial_data))
       ap_matrix = as.matrix(trial_data[, ap_cols, drop = FALSE])
       pi_obs = ap_matrix[cbind(seq_len(nrow(trial_data)), trial_data$Arm)]
