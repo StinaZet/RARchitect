@@ -11,8 +11,8 @@
   arms,
   direction,
   estimation_method = c("MLE", "IPW", "post_mean"),
-  test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-  CI_method = c("wald", "simulation"),
+  test_method = c("standard", "exact", "randomization", "AP", "simulation"),
+  CI_method = c("standard", "simulation"),
   effect_measure = "riskdifference",
   alpha = 0.05,
   multiple_tests = FALSE,
@@ -35,9 +35,9 @@
 
 \item{estimation_method}{"MLE", "IPW", or "post_mean".}
 
-\item{test_method}{"wald", "exact", "randomization", "AP", or "simulation".}
+\item{test_method}{"standard", "exact", "randomization", "AP", or "simulation".}
 
-\item{CI_method}{"wald" or "simulation".}
+\item{CI_method}{"standard" or "simulation".}
 
 \item{effect_measure}{Currently only "riskdifference".}
 
@@ -48,7 +48,7 @@
 \item{onesided}{Logical; if TRUE, one-sided test.}
 
 \item{critval}{Numerical. if the critical value for the simulation-based test is known it can be specified here.
-If it is unknown, leave it for NULL and the critical value is calculated in the function.}
+If it is unknown, leave it for \code{NULL} and the critical value is calculated in the function.}
 
 \item{B}{Number of simulations/permutations for simulation/randomization-based tests.}
 

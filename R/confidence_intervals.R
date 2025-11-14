@@ -3,6 +3,10 @@ simulate_brar_ci <- function(trial_data, priors, blocksize, postprobmethod,
                              urn_alpha, burnin, arms_to_test, alpha, onesided,
                              direction, B) {
 
+  # --- Extract trial structure ---
+  arms = max(trial_data$Arm)
+  N = length(trial_data$Outcome)
+
   # --- Storage: B × K matrix ---
   K = length(arms_to_test)
   T_sim = matrix(NA, nrow = B, ncol = K)

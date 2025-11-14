@@ -14,11 +14,12 @@ analyze_brar_trial(
   priors,
   known_var = NULL,
   estimation_method = c("MLE", "IPW", "post_mean"),
-  test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-  CI_method = c("wald", "simulation"),
+  test_method = c("standard", "exact", "randomization", "AP", "simulation"),
+  CI_method = c("standard", "simulation"),
   effect_measure = "riskdifference",
   multiple_tests = FALSE,
   onesided = TRUE,
+  critval = NULL,
   B = 10000,
   alpha = 0.05,
   prob_threshold = NULL,
@@ -47,15 +48,18 @@ Must include columns 'Arm' and 'Outcome'.}
 
 \item{estimation_method}{\code{"MLE"}, \code{"IPW"}, or \code{"post_mean"}.}
 
-\item{test_method}{\code{"wald"}, \code{"exact"}, \code{"randomization"}, \code{"AP"}, or \code{"simulation"}.}
+\item{test_method}{\code{"standard"}, \code{"exact"}, \code{"randomization"}, \code{"AP"}, or \code{"simulation"}.}
 
-\item{CI_method}{\code{"wald"} or \code{"simulation"}.}
+\item{CI_method}{\code{"standard"} or \code{"simulation"}.}
 
 \item{effect_measure}{Currently only \code{"riskdifference"} supported.}
 
 \item{multiple_tests}{Logical; if \code{TRUE}, test all experimental arms vs control with Bonferroni adjustment.}
 
 \item{onesided}{Logical; if \code{TRUE}, perform one-sided test.}
+
+\item{critval}{Numerical. if the critical value for the simulation-based test is known it can be specified here.
+If it is unknown, leave it for \code{NULL} and the critical value is calculated in the function.}
 
 \item{B}{Number of simulations/permutations for simulation/randomization-based tests.}
 
@@ -84,7 +88,7 @@ Also reports patient benefit (number of patients on the estimated best arm).
 \strong{Notes:}
 \itemize{
 \item MLE estimation may be biased under adaptive randomization.
-\item Wald test and Wald confidence intervals may not be valid for BRAR data.
+\item Standard test and standard confidence intervals may not be valid for BRAR data.
 \item For adaptive designs, prefer "post_mean" or "IPW" estimation and "randomization" or "AP" testing.
 }
 }
@@ -116,14 +120,14 @@ analyze_brar_trial(outcome_type = "binary",
   test_method = "simulation", CI_method = "simulation",
   B = 10)
 
-# --- Example 2: Wald test (not recommended for BRAR) ---
+# --- Example 2: standard test (not recommended for BRAR) ---
 analyze_brar_trial(outcome_type = "binary",
   trial_data = results_binary_multiarm,
   N = 150, arms = 3, direction = "higher",
   priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
   distribution = "bernoulli", postprobmethod = "simulation",
   estimation_method = "MLE",
-  test_method = "wald", CI_method = "wald")
+  test_method = "standard", CI_method = "standard")
 
 # --- Example 3: AP test (Allocation-Probability test) ---
 analyze_brar_trial(outcome_type = "binary",

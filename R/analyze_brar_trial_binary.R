@@ -118,7 +118,7 @@
   args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
   args$postprobmethod = ifelse(!"postprobmethod" %in% names(args), "simulation", args$postprobmethod)
   args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), 0, args$urn_alpha)
-  args$multiarm_method = ifelse(!"multiarm_method" %in% names(args), NULL, args$multiarm_method)
+  #args$multiarm_method = ifelse(!"multiarm_method" %in% names(args), NULL, args$multiarm_method)
 
   # --- Simulation-based or randomization tests ---
   if (test_method %in% c("AP", "simulation", "randomization"))
@@ -171,7 +171,7 @@
           randmethod = args$randmethod,
           urn_alpha = args$urn_alpha,
           burnin = args$burnin,
-          direction = args$direction,
+          direction = direction,
           B = B,
           alpha = 1 - conf_level)
 
@@ -193,7 +193,7 @@
         postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
         randmethod = args$randmethod, urn_alpha = args$urn_alpha, tuning = args$tuning,
         clipping = args$clipping, burnin = args$burnin, B = B, alternative = alternative_str,
-        arms_to_test = arms_to_test, direction = args$direction)
+        arms_to_test = arms_to_test, direction = direction)
     }
 
   } else {
@@ -241,7 +241,7 @@
       z_crit = stats::qnorm(conf_level)
       test_results_df[iii, c("ci_low","ci_high")] = diff_est + c(-1, 1) * z_crit * se
     } else if (CI_method == "simulation") {
-      tci_mat = simulate_brar_ci(
+      ci_mat = simulate_brar_ci(
         trial_data = trial_data,
         priors = priors,
         blocksize = args$blocksize,
@@ -255,7 +255,7 @@
         arms_to_test = arms_to_test,
         alpha = 1 - conf_level,
         onesided = onesided,
-        direction = args$direction,
+        direction = direction,
         B = B)
 
       # Fill the results dataframe

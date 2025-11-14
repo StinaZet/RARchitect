@@ -226,13 +226,13 @@ monte_carlo_test_brar <- function(trial_data, arms_to_test, critval = NULL,
       # --- Compute p-values from empirical null distribution ---
       if (alternative == "greater") {
         p_values[i] = mean(mc_stats[, i] >= T_obs)
-        critval[i] = crit_values$greater
+        critval[i] = crit_values$greater[i]
       } else if (alternative == "less") {
         p_values[i] = mean(mc_stats[, i] <= T_obs)
-        critval[i] = crit_values$less
+        critval[i] = crit_values$less[i]
       } else if (alternative == "two.sided") {
         p_values[i] = mean(abs(mc_stats[, i]) >= abs(T_obs))
-        critval[i] = crit_values$two.sided
+        critval[i] = crit_values$two.sided[i]
       }
     }
 
