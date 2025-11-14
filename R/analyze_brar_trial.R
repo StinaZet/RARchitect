@@ -19,8 +19,8 @@
 #' @param priors Matrix of prior parameters for Bayesian estimation (2 x K for binary).
 #' @param known_var Logical, for normal outcomes with known variance.
 #' @param estimation_method `"MLE"`, `"IPW"`, or `"post_mean"`.
-#' @param test_method `"wald"`, `"exact"`, `"randomization"`, `"AP"`, or `"simulation"`.
-#' @param CI_method `"wald"` or `"simulation"`.
+#' @param test_method `"standard"`, `"exact"`, `"randomization"`, `"AP"`, or `"simulation"`.
+#' @param CI_method `"standard"` or `"simulation"`.
 #' @param effect_measure Currently only `"riskdifference"` supported.
 #' @param multiple_tests Logical; if `TRUE`, test all experimental arms vs control with Bonferroni adjustment.
 #' @param onesided Logical; if `TRUE`, perform one-sided test.
@@ -41,7 +41,7 @@
 #' @details
 #' **Notes:**
 #' - MLE estimation may be biased under adaptive randomization.
-#' - Wald test and Wald confidence intervals may not be valid for BRAR data.
+#' - Standard test and standard confidence intervals may not be valid for BRAR data.
 #' - For adaptive designs, prefer "post_mean" or "IPW" estimation and "randomization" or "AP" testing.
 #'
 #' @examples
@@ -72,14 +72,14 @@
 #'   test_method = "simulation", CI_method = "simulation",
 #'   B = 10)
 #'
-#' # --- Example 2: Wald test (not recommended for BRAR) ---
+#' # --- Example 2: standard test (not recommended for BRAR) ---
 #' analyze_brar_trial(outcome_type = "binary",
 #'   trial_data = results_binary_multiarm,
 #'   N = 150, arms = 3, direction = "higher",
 #'   priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
 #'   distribution = "bernoulli", postprobmethod = "simulation",
 #'   estimation_method = "MLE",
-#'   test_method = "wald", CI_method = "wald")
+#'   test_method = "standard", CI_method = "standard")
 #'
 #' # --- Example 3: AP test (Allocation-Probability test) ---
 #' analyze_brar_trial(outcome_type = "binary",
@@ -98,8 +98,8 @@ analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
                                trial_data, N, arms, direction = c("lower", "higher"),
                                priors, known_var = NULL,
                                estimation_method = c("MLE", "IPW", "post_mean"),
-                               test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-                               CI_method = c("wald", "simulation"),
+                               test_method = c("standard", "exact", "randomization", "AP", "simulation"),
+                               CI_method = c("standard", "simulation"),
                                effect_measure = "riskdifference",
                                multiple_tests = FALSE, onesided = TRUE,
                                critval = NULL, B = 10000,
@@ -162,10 +162,10 @@ analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
   # --- Method warnings for BRAR data ---
   if (estimation_method == "MLE")
     warning("MLE estimation may be biased under BRAR. Consider 'IPW' or 'post_mean'.")
-  if (test_method == "wald")
-    warning("Wald test may not be appropriate for BRAR data. Consider 'randomization', 'simulation', or 'AP'.")
-  if (CI_method == "wald")
-    warning("Wald confidence intervals may not be appropriate for BRAR data. Consider 'simulation' CIs.")
+  if (test_method == "standard")
+    warning("Standard test may not be appropriate for BRAR data. Consider 'randomization', 'simulation', or 'AP'.")
+  if (CI_method == "standard")
+    warning("Standard confidence intervals may not be appropriate for BRAR data. Consider 'simulation' CIs.")
 
 
 

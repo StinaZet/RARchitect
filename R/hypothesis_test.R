@@ -107,7 +107,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
 
 # Monte Carlo Simulation Test for Multiple Arms
 # First function is for finding the null dsitribution.
-monte_carlo_null_brar = function(trial_data, priors, blocksize,
+monte_carlo_null_brar <- function(trial_data, priors, blocksize,
                                  postprobmethod, multiarm_method,
                                  tuning, clipping, randmethod,
                                  urn_alpha, burnin, direction,
@@ -167,7 +167,7 @@ monte_carlo_null_brar = function(trial_data, priors, blocksize,
 }
 
 # Second function is for performing the test.
-monte_carlo_test_brar = function(trial_data, arms_to_test, critval = NULL,
+monte_carlo_test_brar <- function(trial_data, arms_to_test, critval = NULL,
                                  alternative, null_distribution = NULL) {
 
 

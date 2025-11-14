@@ -10,8 +10,8 @@
 #' @param arms Number of treatment arms.
 #' @param direction "higher" or "lower".
 #' @param estimation_method "MLE", "IPW", or "post_mean".
-#' @param test_method "wald", "exact", "randomization", "AP", or "simulation".
-#' @param CI_method "wald" or "simulation".
+#' @param test_method "standard", "exact", "randomization", "AP", or "simulation".
+#' @param CI_method "standard" or "simulation".
 #' @param effect_measure Currently only "riskdifference".
 #' @param alpha Significance level for CI calculation.
 #' @param multiple_tests Logical; if TRUE, all experimental arms vs control.
@@ -29,8 +29,8 @@
 .analyze_brar_trial_binary <- function(
     trial_data, priors, N, arms, direction,
     estimation_method = c("MLE", "IPW", "post_mean"),
-    test_method = c("wald", "exact", "randomization", "AP", "simulation"),
-    CI_method = c("wald", "simulation"),
+    test_method = c("standard", "exact", "randomization", "AP", "simulation"),
+    CI_method = c("standard", "simulation"),
     effect_measure = "riskdifference", alpha = 0.05, multiple_tests = FALSE,
     onesided = TRUE, critval = NULL, B = 10000, ...) {
 
@@ -50,7 +50,8 @@
 
   # --- Estimate outcomes per arm ---
   arm_estimates = numeric(arms)
-  for (k in 1:arms) {
+  for (k in 1:arms)
+  {
     n_k = arm_summary[[k]]$n
     y_k = arm_summary[[k]]$y
 
@@ -103,8 +104,7 @@
     effect_estimate = effect,
     p_value = NA_real_,
     ci_low = NA_real_,
-    ci_high = NA_real_
-  )
+    ci_high = NA_real_)
 
   n_c = arm_summary[[1]]$n
   y_c = arm_summary[[1]]$y
@@ -118,11 +118,14 @@
   args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
   args$postprobmethod = ifelse(!"postprobmethod" %in% names(args), "simulation", args$postprobmethod)
   args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), 0, args$urn_alpha)
+  args$multiarm_method = ifelse(!"multiarm_method" %in% names(args), NULL, args$multiarm_method)
 
   # --- Simulation-based or randomization tests ---
-  if (test_method %in% c("AP", "simulation", "randomization")) {
-
-    if (test_method == "AP") {
+  if (test_method %in% c("AP", "simulation", "randomization"))
+  {
+    # The AP test.
+    if (test_method == "AP")
+    {
       test_results_df$p_value = ap_test_brar(
         trial_data = trial_data,
         priors = priors,
@@ -141,7 +144,7 @@
         alpha = alpha,
         B = B,
         N = N)$p_values
-    } else if (test_method == "simulation") {
+    } else if (test_method == "simulation") { # The simulation based test.
       # Just compute the test result if a critical value is specified
       if(is.numeric(critval))
       {
@@ -155,7 +158,7 @@
         test_results_df$test_result = test_results_mc$test_result
         # The critical value of the test.
         test_results_df$critval = test_results_mc$critval
-      } else{ # Otherwise, compute the null dsitribution and p-values.
+      } else{ # Otherwise, compute the null distribution and p-values.
         # Step 1: Generate Monte Carlo null distribution
         mc_stats = monte_carlo_null_brar(
           trial_data = trial_data,
@@ -172,7 +175,7 @@
           B = B,
           alpha = 1 - conf_level)
 
-        # Step 2: Compute p-values using the observed data and simulated null stats
+        # Step 2: Compute p-values using the observed data and simulated null stats.
         test_results_mc = monte_carlo_test_brar(
           trial_data = trial_data,
           null_distribution = mc_stats,
@@ -184,7 +187,7 @@
         # The critical value of the test.
         test_results_df$critval = test_results_mc$critval
       }
-    } else if (test_method == "randomization") {
+    } else if (test_method == "randomization") { # The randomization based test.
       test_results_df$p_value = randomization_test_brar(
         trial_data = trial_data, priors = priors, blocksize = args$blocksize,
         postprobmethod = args$postprobmethod, multiarm_method = args$multiarm_method,
@@ -194,14 +197,14 @@
     }
 
   } else {
-    # Wald or exact tests: loop over each arm
+    # Standard or exact tests: loop over each arm
     for (i in seq_along(arms_to_test)) {
       k = arms_to_test[i]
       n_e = arm_summary[[k]]$n
       y_e = arm_summary[[k]]$y
       if (n_c == 0 || n_e == 0) next
 
-      if (test_method == "wald") {
+      if (test_method == "standard") {
         p1 = y_e / n_e
         p0 = y_c / n_c
         se = sqrt(p1*(1-p1)/n_e + p0*(1-p0)/n_c)
@@ -223,26 +226,54 @@
   }
 
   # --- Confidence intervals ---
-  for (i in seq_along(arms_to_test)) {
-    k = arms_to_test[i]
+  # Loop over the number of arms of interest.
+  for (iii in seq_along(arms_to_test))
+  {
+    k = arms_to_test[iii]
     n_e = arm_summary[[k]]$n
     y_e = arm_summary[[k]]$y
     if (n_c == 0 || n_e == 0) next
 
-    if (CI_method == "wald") {
+    # Standard confidence intervals.
+    if (CI_method == "standard") {
       diff_est = y_e / n_e - y_c / n_c
-      se = sqrt((y_e/n_e*(1-y_e/n_e)/n_e) + (y_c/n_c*(1-y_c/n_c)/n_c))
+      se = sqrt((y_e / n_e * (1 - y_e / n_e) / n_e) + (y_c / n_c * (1 - y_c / n_c) / n_c))
       z_crit = stats::qnorm(conf_level)
-      test_results_df[i, c("ci_low","ci_high")] = diff_est + c(-1,1)*z_crit*se
+      test_results_df[iii, c("ci_low","ci_high")] = diff_est + c(-1, 1) * z_crit * se
     } else if (CI_method == "simulation") {
-      test_results_df[i, c("ci_low","ci_high")] = perform_bootstrap_ci(
-        y_c, n_c, y_e, n_e, alpha = alpha_adj, onesided = onesided, direction = direction, B = B
-      )
+      tci_mat = simulate_brar_ci(
+        trial_data = trial_data,
+        priors = priors,
+        blocksize = args$blocksize,
+        postprobmethod = args$postprobmethod,
+        multiarm_method = args$multiarm_method,
+        tuning = args$tuning,
+        clipping = args$clipping,
+        randmethod = args$randmethod,
+        urn_alpha = args$urn_alpha,
+        burnin = args$burnin,
+        arms_to_test = arms_to_test,
+        alpha = 1 - conf_level,
+        onesided = onesided,
+        direction = args$direction,
+        B = B)
+
+      # Fill the results dataframe
+      for (i in seq_along(arms_to_test))
+      {
+        # The arm of interest.
+        k = arms_to_test[iii]
+
+        # The confidence interval.
+        test_results_df$ci_low[iii]  = ci_mat["lower", paste0("Arm", k)]
+        test_results_df$ci_high[iii] = ci_mat["upper", paste0("Arm", k)]
+      }
     }
   }
 
   # --- Compute patient benefit and mean outcome ---
-  best_arm = if (multiple_tests) {
+  best_arm = if (multiple_tests)
+  {
     exp_arm_estimates = arm_estimates[-1]
     if (direction == "higher") which.max(exp_arm_estimates) + 1 else which.min(exp_arm_estimates) + 1
   } else {
