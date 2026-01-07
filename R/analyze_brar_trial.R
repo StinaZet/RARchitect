@@ -127,6 +127,12 @@ analyze_brar_trial <- function(outcome_type = c("binary", "cont"),
     )
   }
 
+  # AP test only works for one-sided alternative hypotheses.
+  if (test_method == "AP" && onesided == FALSE) {
+    stop("The AP test can only be used to test one-sided hypothesis. Please choose another hypothesis test or another alternative hypothesis.")
+  }
+
+
   # Check that the columns with allocation probabilities are named correctly.
   if (estimation_method == "IPW" || test_method == "AP" || CI_method == "IPW")
   {

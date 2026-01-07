@@ -126,24 +126,50 @@
     # The AP test.
     if (test_method == "AP")
     {
-      test_results_df$p_value = ap_test_brar(
-        trial_data = trial_data,
-        priors = priors,
-        direction = direction,
-        blocksize = args$blocksize,
-        randmethod = args$randmethod,
-        tuning = args$tuning,
-        clipping = args$clipping,
-        postprobmethod = args$postprobmethod,
-        multiarm_method = args$multiarm_method,
-        modelpar = rep(mean(trial_data$Outcome), arms),
-        urn_alpha = args$urn_alpha,
-        burnin = args$burnin,
-        multiple_tests = multiple_tests,
-        onesided = onesided,
-        alpha = alpha,
-        B = B,
-        N = N)$p_values
+      # Just compute the test result if a critical value is specified
+      if(is.numeric(critval))
+      {
+        test_results_ap = ap_test_brar(
+          trial_data = trial_data,
+          burnin = burnin, blocksize = blocksize,
+          critval = critval,
+          alternative = alternative_str,
+          arms_to_test = arms_to_test)
+
+        # The p-value of the test.
+        test_results_df$test_result = test_results_ap$test_result
+        # The critical value of the test.
+        test_results_df$critval = test_results_ap$critval
+      } else{ # Otherwise, compute the null distribution and p-values.
+        # Step 1: Generate AP null distribution
+        ap_stats = ap_null_brar(
+          trial_data = trial_data,
+          priors = priors,
+          blocksize = args$blocksize,
+          postprobmethod = args$postprobmethod,
+          multiarm_method = args$multiarm_method,
+          tuning = args$tuning,
+          clipping = args$clipping,
+          randmethod = args$randmethod,
+          urn_alpha = args$urn_alpha,
+          burnin = args$burnin,
+          direction = direction,
+          B = B,
+          alpha = 1 - conf_level)
+
+        # Step 2: Compute p-values using the observed data and simulated null stats.
+        test_results_ap = ap_test_brar(
+          trial_data = trial_data,
+          burnin = burnin, blocksize = blocksize,
+          null_distribution = ap_stats,
+          alternative = alternative_str,
+          arms_to_test = arms_to_test)
+
+        # The p-value of the test.
+        test_results_df$p_value = test_results_ap$p_values
+        # The critical value of the test.
+        test_results_df$critval = test_results_ap$critval
+      }
     } else if (test_method == "simulation") { # The simulation based test.
       # Just compute the test result if a critical value is specified
       if(is.numeric(critval))

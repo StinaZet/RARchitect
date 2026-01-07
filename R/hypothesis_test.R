@@ -106,7 +106,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
 
 
 # Monte Carlo Simulation Test for Multiple Arms
-# First function is for finding the null dsitribution.
+# First function is for finding the null distribution.
 monte_carlo_null_brar <- function(trial_data, priors, blocksize,
                                  postprobmethod, multiarm_method,
                                  tuning, clipping, randmethod,
@@ -243,117 +243,141 @@ monte_carlo_test_brar <- function(trial_data, arms_to_test, critval = NULL,
 }
 
 
-
-
-
 # The AP test for binary data with BRAR.
-ap_test_brar <- function(
-    trial_data, priors, blocksize,
-    direction = "higher", multiple_tests = FALSE,
-    onesided = TRUE, alpha = 0.05, B, modelpar,
-    N = NULL,  randmethod = "coin", tuning = 1, clipping = 0,
-    postprobmethod = "simulation", multiarm_method, ...) {
+# First function is for finding the null distribution.
+ap_null_brar <- function(trial_data, priors, blocksize,
+                         postprobmethod, multiarm_method,
+                         tuning, clipping, randmethod,
+                         urn_alpha, burnin, direction,
+                         B, alpha) {
 
-  arms = length(unique(trial_data$Arm))
-  if (is.null(N)) N = nrow(trial_data)
+  # --- Extract trial structure ---
+  N = length(trial_data$Outcome)
+  arms = max(trial_data$Arm)
 
-  # --- Determine which arms to test ---
-  if (multiple_tests) {
-    arms_to_test = 2:arms
-  } else {
-    # Select best experimental arm based on allocation frequency
-    alloc_freq = table(trial_data$Arm) / nrow(trial_data)
-    control_prob = alloc_freq[1]
-    exp_probs = alloc_freq[-1]
-    if (direction == "higher") {
-      best_arm = which.max(exp_probs) + 1
-    } else {
-      best_arm = which.min(exp_probs) + 1
-    }
-    arms_to_test = best_arm
-  }
+  # --- Storage ---
+  ap_stats = matrix(NA, nrow = B, ncol = arms - 1)
 
-  # --- Observed test statistic: how often each arm was favored ---
-  # The test statistic = number of batches where arm's allocation prob > 1/arms
-  favored_counts = numeric(length(arms_to_test))
-  for (i in seq_along(arms_to_test)) {
-    k = arms_to_test[i]
-    favored_counts[i] = sum(tapply(trial_data$Arm == k, trial_data$Batch, mean) > 1 / arms)
-  }
-
-  # --- Simulate null distribution ---
-  null_matrix = matrix(NA, nrow = B, ncol = length(arms_to_test))
+  # --- Simulate under null hypothesis ---
   for (b in seq_len(B)) {
-    sim_trial = simulate_brar_trial(outcome_type = c("binary"),
-      distribution = c("bernoulli"),
-      arms = arms, N = N, blocksize = blocksize,
-      priors = priors, modelpar = rep(mean(trial_data$Outcome), arms),
-      direction = direction, randmethod = randmethod,
-      tuning = tuning, clipping = clipping,
+    ap_data = simulate_brar_trial(
+      outcome_type = "binary",
+      distribution = "bernoulli",
+      arms = arms,
+      N = N,
+      blocksize = blocksize,
+      priors = priors,
+      modelpar = rep(mean(trial_data$Outcome), arms),  # pooled mean under H0
+      direction = direction,
+      randmethod = randmethod,
+      tuning = tuning,
+      clipping = clipping,
       postprobmethod = postprobmethod,
       multiarm_method = multiarm_method,
       recruitment_rate = 100000,
-      observation_delay = 0,...)
+      observation_delay = 0
+    )
+
+    ap_data = ap_data[-(1:burnin), ][seq(1, N - burnin, by = blocksize), ]
+
+    # --- Compute AP test statistic for each arm ---
+    for (k in 2:arms) {
+
+      # Value for equal randomization.
+      ER = 1 / arms
+
+      # AP test statistics if direction is "higher".
+      if(direction == "higher"){
+        ap_stats[b, k - 1] = sum(ap_data[, 3 + k] > ER)
+      } else if(direction == "lower"){
+        ap_stats[b, k - 1] = sum(ap_data[, 3 + k] < ER)
+      }
+    }
+  }
+
+  # --- Compute null critical values for chosen alpha ---
+  crit_values = list(
+    if(direction == "higher"){
+      greater = apply(ap_stats, 2, stats::quantile, probs = 1 - alpha, na.rm = TRUE)
+    } else if(direction == "lower"){
+      less = apply(ap_stats, 2, stats::quantile, probs = alpha, na.rm = TRUE)
+    }
+  )
+
+  return(list(
+    ap_stats = ap_stats,
+    crit_values = crit_values,
+    alpha = alpha
+  ))
+}
+
+
+# Second function is for performing the test.
+ap_test_brar <- function(trial_data, burnin, blocksize, arms_to_test, critval = NULL,
+                         alternative, null_distribution = NULL) {
+
+
+  # ER probability to compare allocation probabilities against.
+  ER = 1 / arms_to_test
+
+  # Prepare the data for AP test.
+  N = length(trial_data[,1])
+  # Remove the duplicates in term of allocation probabilities
+  trial_data = trial_data[-(1:burnin), ][seq(1, N - burnin, by = blocksize), ]
+
+  # If the critical value is given, just compute the test decision.
+  if(is.numeric(critval))
+  {
+    test_results = numeric(length(arms_to_test))
+
+    for (i in seq_along(arms_to_test)) {
+      # Compute the observed test statistic.
+      if (alternative == "greater") {
+        ap_obs = sum(trial_data[, 4 + i] > ER)
+        test_results[i] = ifelse(ap_obs > critval[i], 1, 0)
+      } else if (alternative == "less") {
+        ap_obs = sum(trial_data[, 4 + i] < ER)
+        test_results[i] = ifelse(ap_obs < critval[i], 1, 0)
+      }
+    }
+
+    names(test_results) = paste0("Arm", arms_to_test)
+
+    return(list(test_results = test_results, critval = critval))
+  } else{ # Compute p-values with the full null distribution.
+    ap_stats = null_distribution$ap_stats
+    crit_values = null_distribution$crit_values
+    alpha = null_distribution$alpha
+
+
+    # --- Compute observed test statistics ---
+    p_values = numeric(length(arms_to_test))
+    critval = numeric(length(arms_to_test))
 
     for (i in seq_along(arms_to_test)) {
       k = arms_to_test[i]
-      null_matrix[b, i] = sum(tapply(sim_trial$Arm == k, sim_trial$Batch, mean) > 1 / arms)
-    }
-  }
-
-  # --- Compute conservative integer critical values and p-values ---
-  p_values = numeric(length(arms_to_test))
-  critical_values = integer(length(arms_to_test))
-
-  for (i in seq_along(arms_to_test)) {
-    obs_stat = favored_counts[i]
-    null_dist = null_matrix[, i]
-    unique_vals = sort(unique(null_dist))
-    tail_probs = sapply(unique_vals, function(v) mean(null_dist >= v))
-    low_tail_probs = sapply(unique_vals, function(v) mean(null_dist <= v))
-
-    if (onesided) {
-      # Conservative integer cutoff
-      valid_vals = unique_vals[tail_probs <= alpha]
-      if (length(valid_vals) > 0) {
-        crit_val = max(valid_vals)
-      } else {
-        nonzero_vals = unique_vals[tail_probs > 0]
-        crit_val = max(nonzero_vals)
+      if (alternative == "greater") {
+        ap_obs = sum(trial_data[, 4 + i] > ER)
+      } else if (alternative == "less") {
+        ap_obs = sum(trial_data[, 4 + i] < ER)
       }
 
-      p_val = mean(null_dist >= obs_stat)
-    } else {
-      # Two-sided: both tails (non-symmetric)
-      valid_high = unique_vals[tail_probs <= alpha / 2]
-      valid_low = unique_vals[low_tail_probs <= alpha / 2]
-
-      if (length(valid_high) > 0) {
-        crit_high = max(valid_high)
-      } else {
-        nonzero_high = unique_vals[tail_probs > 0]
-        crit_high = max(nonzero_high)
+      # --- Compute p-values from empirical null distribution ---
+      if (alternative == "greater") {
+        p_values[i] = mean(ap_stats[, i] > ap_obs)
+        if(p_values[i] == 0) p_values[i] = mean(ap_stats[, i] > ap_obs - 1)
+        critval[i] = crit_values$greater[i]
+      } else if (alternative == "less") {
+        p_values[i] = mean(ap_stats[, i] < ap_obs)
+        if(p_values[i] == 0) p_values[i] = mean(ap_stats[, i] < ap_obs + 1)
+        critval[i] = crit_values$less[i]
       }
-      if (length(valid_low) > 0) {
-        crit_low = min(valid_low)
-      } else {
-        nonzero_low = unique_vals[low_tail_probs > 0]
-        crit_low = min(nonzero_low)
-      }
-
-      crit_val = c(low = crit_low, high = crit_high)
-      p_val = mean(null_dist <= obs_stat) + mean(null_dist >= obs_stat)
-      p_val = min(p_val, 1)
     }
 
-    p_values[i] = p_val
-    critical_values[i] = if (onesided) crit_val else NA_integer_
-  }
+    names(p_values) = paste0("Arm", arms_to_test)
 
-  names(p_values) = paste0("Arm", arms_to_test)
-  return(list(
-    p_values = p_values,
-    critical_values = critical_values,
-    test_statistics = favored_counts
-  ))
+    return(list(p_values = p_values, critval = critval, alpha = alpha))
+  }
 }
+
+
