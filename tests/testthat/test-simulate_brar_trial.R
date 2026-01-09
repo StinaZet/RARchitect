@@ -1,5 +1,5 @@
 test_that("tuning 0 gives ER", {
- a = simulate_brar_trial(
+ a = suppressWarnings(simulate_brar_trial(
      outcome_type = "binary",
      distribution = "bernoulli",
      arms = 2, N = 100, blocksize = 10,
@@ -8,7 +8,7 @@ test_that("tuning 0 gives ER", {
      tuning = 0, clipping = 0, burnin = 0, randmethod = "coin",
      postprobmethod = "simulation",
      recruitment_rate = 5,
-     observation_delay = 30)[,6]
+     observation_delay = 30)[,6])
 
  b = rep(0.5, 100)
 
@@ -56,7 +56,7 @@ library(testthat)
 # --------------------------------------------------------------------------------
 
 test_that("simulate_brar_trial handles zero participants correctly", {
-  res <- simulate_brar_trial(
+  res <- suppressWarnings(simulate_brar_trial(
     direction = "higher",
     arms = 2,
     N = 0,
@@ -70,7 +70,7 @@ test_that("simulate_brar_trial handles zero participants correctly", {
     randmethod = "coin",
     urn_alpha = 1,
     multiarm_method = "fixed"
-  )
+  ))
   expect_true(is.data.frame(res))
   expect_equal(nrow(res), 0)
   expect_equal(ncol(res), 5 + 2) # Batch, Arm, Outcome + allocation_probs for 2 arms
@@ -83,7 +83,7 @@ test_that("simulate_brar_trial produces correct number of rows and columns", {
   priors <- matrix(c(1,1,1,1), nrow=2)
   modelpar <- c(0.5, 0.6)
 
-  res <- simulate_brar_trial(
+  res <- suppressWarnings(simulate_brar_trial(
     direction = "higher",
     arms = arms,
     N = N,
@@ -97,7 +97,7 @@ test_that("simulate_brar_trial produces correct number of rows and columns", {
     randmethod = "coin",
     urn_alpha = 1,
     multiarm_method = "fixed"
-  )
+  ))
 
   expect_true(is.data.frame(res))
   expect_equal(nrow(res), N)

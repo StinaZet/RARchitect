@@ -7,7 +7,7 @@ posterior_bin_sim <- function(M = 10000, alphas, betas, direction = c("higher", 
 
   # Simulate M posterior samples for each arm.
   # Create an M x K matrix where each column is rbeta(M, alpha_k, beta_k)
-  samples = replicate(K, stats::rbeta(M, alphas, betas))
+  samples = sapply(1:K, function(i) stats::rbeta(M, alphas[i], betas[i]))
 
   if (direction == "lower") {
     samples = -samples
@@ -62,7 +62,7 @@ posterior_norm_sim <- function(M = 10000, means, sds, direction = c("higher", "l
   K = length(means)
 
   # Simulate M posterior samples for each arm
-  samples = replicate(K, stats::rnorm(M, means, sds))
+  samples = sapply(1:K, function(i) stats::rnorm(M, means[i], sds[i]))
 
   if (direction == "lower") {
     samples = -samples
@@ -134,6 +134,7 @@ posterior_exp_sim <- function(M = 10000, shapes, rates, direction = c("higher", 
 
   # Simulate M posterior samples for each arm
   samples = replicate(K, stats::rgamma(M, shape = shapes, rate = rates))
+  samples = sapply(1:K, function(i) stats::rgamma(M, shape = shapes[i], rate = rates[i]))
 
   if (direction == "lower") {
     samples = -samples
