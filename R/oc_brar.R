@@ -2,87 +2,44 @@
 #'
 #' @description
 #' Simulates and analyzes \code{M} independent Bayesian response-adaptive randomization
-#' (BRAR) trials using \code{\link{simulate_brar_trial}} and
-#' \code{\link{analyze_brar_trial}}, and summarizes operating characteristics such as
-#' rejection probabilities, allocation proportions, patient benefit, and trial duration.
+#' (BRAR) trials and computes operating characteristics including treatment effect
+#' performance, power/type I error, confidence interval coverage, and allocation behavior.
 #'
 #' @param M Integer. Number of Monte Carlo trial replicates.
+#' @param true_effect Numeric vector. True treatment effect(s) for experimental arms
+#'   (on the scale returned by the analyzer, e.g., risk difference).
 #' @param seed Optional integer. Random seed for reproducibility.
+#' @param plot Logical. If TRUE, produces a boxplot of sample sizes per arm.
 #' @param ... Additional arguments passed to both
 #'   \code{\link{simulate_brar_trial}} and \code{\link{analyze_brar_trial}}.
 #'
 #' @return A list with components:
 #' \describe{
-#'   \item{raw_results}{List containing per-replicate trial data and analysis results.}
-#'   \item{oc}{Named list of summarized operating characteristics.}
-#'   \item{settings}{List of design and analysis parameters used.}
+#'   \item{effect}{Mean estimates and Monte Carlo error.}
+#'   \item{testing}{Power or type I error.}
+#'   \item{coverage}{Confidence interval coverage.}
+#'   \item{allocation}{Mean and distribution of sample sizes per arm.}
+#'   \item{raw}{Raw Monte Carlo outputs.}
 #' }
-#'
-#' @details
-#' For each replicate, the function:
-#' \enumerate{
-#'   \item Simulates a BRAR trial using \code{simulate_brar_trial()}.
-#'   \item Analyzes the trial using \code{analyze_brar_trial()}.
-#'   \item Extracts quantities of interest (e.g., p-values, allocation, patient benefit).
-#' }
-#'
-#' By default, the following operating characteristics are reported:
-#' \itemize{
-#'   \item Rejection probability (per tested arm)
-#'   \item Mean patient benefit
-#'   \item Mean overall outcome
-#'   \item Mean and SD of allocation proportions
-#'   \item Mean trial duration (if outcome times are present)
-#' }
-#'
-#' This function is designed to be extensible. Users can easily add new operating
-#' characteristics such as power, type I error, probability of correct selection,
-#' expected sample size, or bias and RMSE of estimators.
 #'
 #' @export
-#'
-#' @examples
-#' \dontrun{
-#' oc <- oc_brar(
-#'   M = 100,
-#'   seed = 1,
-#'   outcome_type = "binary",
-#'   distribution = "bernoulli",
-#'   direction = "higher",
-#'   arms = 2, N = 100, blocksize = 10,
-#'   modelpar = c(0.5, 0.65),
-#'   priors = matrix(c(1, 1, 1, 1), nrow = 2),
-#'   tuning = 1, clipping = 0, burnin = 0,
-#'   randmethod = "coin",
-#'   postprobmethod = "exact",
-#'   estimation_method = "IPW",
-#'   test_method = "simulation",
-#'   CI_method = "simulation",
-#'   B = 500, alpha = 0.05
-#' )
-#'
-#' oc$oc
-#' }
 oc_brar <- function(M,
+                    true_effect,
                     seed = NULL,
+                    plot = TRUE,
                     ...) {
 
-  if (missing(M) || M <= 0 || M %% 1 != 0)
-    stop("'M' must be a positive integer.")
-
+  if (M <= 0 || M %% 1 != 0) stop("'M' must be a positive integer.")
   if (!is.null(seed)) set.seed(seed)
 
   args = list(...)
+  alpha = ifelse(is.null(args$alpha), 0.05, args$alpha)
 
   # --- storage ---
-  trial_data_list  = vector("list", M)
-  analysis_list    = vector("list", M)
-
-  reject_mat      = NULL
-  patient_benefit = numeric(M)
-  mean_outcome    = numeric(M)
-  alloc_props     = NULL
-  trial_duration  = rep(NA_real_, M)
+  eff_mat   = NULL
+  pval_mat  = NULL
+  cover_mat = NULL
+  n_alloc   = NULL
 
   # --- main loop ---
   for (m in seq_len(M)) {
@@ -92,47 +49,84 @@ oc_brar <- function(M,
     analysis = do.call(analyze_brar_trial,
                         c(list(trial_data = trial_data), args))
 
-    trial_data_list[[m]] = trial_data
-    analysis_list[[m]]   = analysis
+    res = analysis$test_results_df
 
-    # --- rejection indicators ---
-    if (!is.null(analysis$test_results_df$p_value)) {
-      reject_mat = rbind(reject_mat,
-                          analysis$test_results_df$p_value < args$alpha)
-    }
+    # --- treatment effects ---
+    eff_mat = rbind(eff_mat, res$effect_estimate)
 
-    # --- patient benefit and outcome ---
-    patient_benefit[m] = analysis$patient_benefit
-    mean_outcome[m]    = analysis$mean_outcome
+    # --- hypothesis tests ---
+    pval_mat = rbind(pval_mat, res$p_value)
 
-    # --- allocation proportions ---
-    alloc_tab = table(trial_data$Arm)
-    alloc_props = rbind(alloc_props, alloc_tab / sum(alloc_tab))
+    # --- CI coverage ---
+    cover_mat = rbind(
+      cover_mat,
+      (true_effect >= res$ci_low) & (true_effect <= res$ci_high)
+    )
 
-    # --- trial duration ---
-    if ("Outcome time" %in% names(trial_data)) {
-      trial_duration[m] = max(trial_data$`Outcome time`)
-    }
+    # --- allocation ---
+    alloc_tab = table(factor(trial_data$Arm, levels = seq_len(args$arms)))
+    n_alloc = rbind(n_alloc, as.numeric(alloc_tab))
   }
 
+  colnames(eff_mat)   = paste0("Arm", seq_len(ncol(eff_mat)) + 1)
+  colnames(pval_mat)  = colnames(eff_mat)
+  colnames(cover_mat) = colnames(eff_mat)
+  colnames(n_alloc)   = paste0("Arm", seq_len(ncol(n_alloc)))
+
   # --- operating characteristics ---
+
+  mean_eff = colMeans(eff_mat, na.rm = TRUE)
+  mc_error = apply(eff_mat, 2, sd, na.rm = TRUE) / sqrt(M)
+
+  rejection_prob = colMeans(pval_mat < alpha, na.rm = TRUE)
+  coverage_prob  = colMeans(cover_mat, na.rm = TRUE)
+  mean_alloc     = colMeans(n_alloc)
+
   oc = list(
-    rejection_prob = colMeans(reject_mat, na.rm = TRUE),
-    mean_patient_benefit = mean(patient_benefit, na.rm = TRUE),
-    sd_patient_benefit   = stats::sd(patient_benefit, na.rm = TRUE),
-    mean_outcome = mean(mean_outcome, na.rm = TRUE),
-    mean_allocation = colMeans(alloc_props, na.rm = TRUE),
-    sd_allocation   = apply(alloc_props, 2, stats::sd, na.rm = TRUE),
-    mean_trial_duration = if (all(is.na(trial_duration)))
-      NULL else mean(trial_duration, na.rm = TRUE)
+
+    effect = data.frame(
+      arm = names(mean_eff),
+      mean_estimate = mean_eff,
+      mc_error = mc_error,
+      row.names = NULL
+    ),
+
+    testing = data.frame(
+      arm = names(rejection_prob),
+      rejection_prob = rejection_prob,
+      row.names = NULL
+    ),
+
+    coverage = data.frame(
+      arm = names(coverage_prob),
+      coverage = coverage_prob,
+      row.names = NULL
+    ),
+
+    allocation = list(
+      mean_n = mean_alloc,
+      all_n  = n_alloc
+    )
   )
 
+  # --- boxplot ---
+  if (plot) {
+    graphics::boxplot(
+      n_alloc,
+      names = colnames(n_alloc),
+      ylab = "Number of patients",
+      main = "Distribution of sample size per arm"
+    )
+  }
+
   return(list(
-    raw_results = list(
-      trial_data = trial_data_list,
-      analysis   = analysis_list
-    ),
     oc = oc,
+    raw = list(
+      effect_estimates = eff_mat,
+      p_values = pval_mat,
+      coverage = cover_mat,
+      allocations = n_alloc
+    ),
     settings = args
   ))
 }
