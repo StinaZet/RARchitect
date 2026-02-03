@@ -234,7 +234,7 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
                                 known_var = FALSE, priors, modelpar, tuning = 1,
                                 clipping = 0, burnin = 0, randmethod = "coin",
                                 urn_alpha = NULL, postprobmethod = "simulation",
-                                multiarm_method = c("fixed", "top2"),
+                                multiarm_method = NULL,
                                 recruitment_rate = 100000,
                                 observation_delay = 0) {
 
@@ -242,7 +242,6 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
   outcome_type = match.arg(outcome_type)
   distribution = match.arg(distribution)
   direction = match.arg(direction)
-  multiarm_method = match.arg(multiarm_method)
 
   # Check combinations of outcome_type and distribution.
   if (outcome_type == "binary" && distribution != "bernoulli") {
@@ -272,6 +271,8 @@ simulate_brar_trial <- function(outcome_type = c("binary", "cont"),
       warning("'multiarm_method' will be ignored when arms = 2.")
     }
   }
+
+
 
   # Validate common parameters
   if (N <= 0 || !is.numeric(N) || N %% 1 != 0) {

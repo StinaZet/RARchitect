@@ -93,51 +93,70 @@ Also reports patient benefit (number of patients on the estimated best arm).
 }
 }
 \examples{
-# --- Example setup: simulate a BRAR trial ---
+# --- Example setup: common trial arguments ---
 set.seed(103)
-results_binary_multiarm = simulate_brar_trial(
+trial_args <- list(
   outcome_type = "binary",
   distribution = "bernoulli",
   direction = "higher",
-  arms = 3, N = 150, burnin = 15, blocksize = 1,
-  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+  arms = 3,
+  N = 150,
+  burnin = 15,
+  blocksize = 1,
   modelpar = c(0.5, 0.7, 0.8),
   tuning = 1,
   clipping = 0,
   randmethod = "coin",
+  multiarm_method = "fixed",
   postprobmethod = "simulation",
   recruitment_rate = 8,
-  observation_delay = 20)
+  observation_delay = 20
+)
+
+# --- Simulate a BRAR trial ---
+results_binary_multiarm <- do.call(simulate_brar_trial, trial_args)
 
 # --- Example 1: Simulation-based test ---
-analyze_brar_trial(outcome_type = "binary",
-  trial_data = results_binary_multiarm,
-  N = 150, arms = 3, direction = "higher",
-  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
-  distribution = "bernoulli", burnin = 15,
-  postprobmethod = "simulation",
-  blocksize = 1, estimation_method = "IPW",
-  test_method = "simulation", CI_method = "simulation",
-  B = 10)
+analyze_args1 <- c(
+  list(
+    trial_data = results_binary_multiarm,
+    priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+    estimation_method = "IPW",
+    test_method = "simulation",
+    CI_method = "simulation",
+    B = 10,
+    onesided = TRUE
+  ),
+  trial_args
+)
+do.call(analyze_brar_trial, analyze_args1)
 
-# --- Example 2: standard test (not recommended for BRAR) ---
-analyze_brar_trial(outcome_type = "binary",
-  trial_data = results_binary_multiarm,
-  N = 150, arms = 3, direction = "higher",
-  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
-  distribution = "bernoulli", postprobmethod = "simulation",
-  estimation_method = "MLE",
-  test_method = "standard", CI_method = "standard")
+# --- Example 2: Standard test (not recommended for BRAR) ---
+analyze_args2 <- c(
+  list(
+    trial_data = results_binary_multiarm,
+    priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+    estimation_method = "MLE",
+    test_method = "standard",
+    CI_method = "standard"
+  ),
+  trial_args
+)
+do.call(analyze_brar_trial, analyze_args2)
 
 # --- Example 3: AP test (Allocation-Probability test) ---
-analyze_brar_trial(outcome_type = "binary",
-  trial_data = results_binary_multiarm,
-  N = 150, arms = 3, direction = "higher",
-  priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
-  distribution = "bernoulli", postprobmethod = "simulation",
-  estimation_method = "IPW",
-  test_method = "AP", CI_method = "simulation",
-  randmethod = "coin", blocksize = 1, B = 10,
-  postprobmethod = "simulation")
+analyze_args3 <- c(
+  list(
+    trial_data = results_binary_multiarm,
+    priors = matrix(c(1, 1, 1, 1, 1, 1), nrow = 2, byrow = TRUE),
+    estimation_method = "IPW",
+    test_method = "AP",
+    CI_method = "simulation",
+    onesided = TRUE,
+    B = 10
+  ),
+  trial_args
+)
+do.call(analyze_brar_trial, analyze_args3)
 
 }

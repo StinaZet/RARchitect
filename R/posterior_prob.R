@@ -133,7 +133,6 @@ posterior_exp_sim <- function(M = 10000, shapes, rates, direction = c("higher", 
   K = length(shapes)
 
   # Simulate M posterior samples for each arm
-  samples = replicate(K, stats::rgamma(M, shape = shapes, rate = rates))
   samples = sapply(1:K, function(i) stats::rgamma(M, shape = shapes[i], rate = rates[i]))
 
   if (direction == "lower") {

@@ -20,7 +20,7 @@ simulate_brar_trial(
   randmethod = "coin",
   urn_alpha = NULL,
   postprobmethod = "simulation",
-  multiarm_method = c("fixed", "top2"),
+  multiarm_method = NULL,
   recruitment_rate = 1e+05,
   observation_delay = 0
 )

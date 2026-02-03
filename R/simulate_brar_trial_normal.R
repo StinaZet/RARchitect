@@ -177,12 +177,11 @@
     idx = (current_range_end + 1):(current_range_end + current_block_size)
     batch_number[idx] = i
 
-
     # Calculate the raw allocation probabilities for each arm
     if (known_var) {
       post_sds = sqrt(current_tau2)
       if (postprobmethod == "simulation") {
-        alloc_probs_raw = posterior_norm_sim(current_mu, post_sds, direction = direction)
+        alloc_probs_raw = posterior_norm_sim(means = current_mu, sds = post_sds, direction = direction)
       } else if(postprobmethod == "exact") {
         alloc_probs_raw = posterior_norm_exact(current_mu, post_sds, direction = direction)
       } else {

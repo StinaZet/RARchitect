@@ -118,7 +118,7 @@
   args$randmethod = ifelse(!"randmethod" %in% names(args), "coin", args$randmethod)
   args$postprobmethod = ifelse(!"postprobmethod" %in% names(args), "simulation", args$postprobmethod)
   args$urn_alpha = ifelse(!"urn_alpha" %in% names(args), 0, args$urn_alpha)
-  #args$multiarm_method = ifelse(!"multiarm_method" %in% names(args), NULL, args$multiarm_method)
+  args$multiarm_method = ifelse(!"multiarm_method" %in% names(args), NULL, args$multiarm_method)
 
   # --- Simulation-based or randomization tests ---
   if (test_method %in% c("AP", "simulation", "randomization"))

@@ -56,7 +56,7 @@
 #'   modelpar = c(0.5, 0.7, 0.8),
 #'   tuning = 1,
 #'   clipping = 0,
-#'   randmethod = "coin",
+#'   randmethod = "coin", multiarm_method = "fixed",
 #'   postprobmethod = "simulation",
 #'   recruitment_rate = 8,
 #'   observation_delay = 20)
