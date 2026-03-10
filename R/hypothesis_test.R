@@ -176,6 +176,9 @@ monte_carlo_test_brar <- function(trial_data, arms_to_test, critval = NULL,
   {
     test_results = numeric(length(arms_to_test))
 
+    control_outcome = trial_data$Outcome[trial_data$Arm == 1]
+    n_control = length(control_outcome)
+
     for (i in seq_along(arms_to_test)) {
       # Compute the observed test statistic.
       k = arms_to_test[i]
