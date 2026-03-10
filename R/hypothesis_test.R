@@ -278,19 +278,21 @@ ap_null_brar <- function(trial_data, priors, blocksize,
       observation_delay = 0
     )
 
-    ap_data = ap_data[-(1:burnin), ][seq(1, N - burnin, by = blocksize), ]
+    # Remove the burn-in and then extract the first individual in every block.
+    # Remove the first three columns (batch, treatment time, and outcome time).
+    ap_data = ap_data[-(1:burnin), -(1:3)][seq(1, N - burnin, by = blocksize), ]
 
     # --- Compute AP test statistic for each arm ---
-    for (k in 2:arms) {
+    for (k in 1:(arms - 1)) {
 
       # Value for equal randomization.
       ER = 1 / arms
 
       # AP test statistics if direction is "higher".
       if(direction == "higher"){
-        ap_stats[b, k - 1] = sum(ap_data[, 3 + k] > ER)
+        ap_stats[b, k] = sum(ap_data[, 3 + k] > ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
       } else if(direction == "lower"){
-        ap_stats[b, k - 1] = sum(ap_data[, 3 + k] < ER)
+        ap_stats[b, k] = sum(ap_data[, 3 + k] < ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
       }
     }
   }
@@ -318,10 +320,12 @@ ap_test_brar <- function(trial_data, burnin, blocksize, arms_to_test, critval = 
 
 
   # ER probability to compare allocation probabilities against.
-  ER = 1 / arms_to_test
+  arms = max(trial_data$Arm)
+  ER = 1 / arms
 
   # Prepare the data for AP test.
   N = length(trial_data[,1])
+
   # Remove the duplicates in term of allocation probabilities
   trial_data = trial_data[-(1:burnin), ][seq(1, N - burnin, by = blocksize), ]
 
@@ -333,10 +337,10 @@ ap_test_brar <- function(trial_data, burnin, blocksize, arms_to_test, critval = 
     for (i in seq_along(arms_to_test)) {
       # Compute the observed test statistic.
       if (alternative == "greater") {
-        ap_obs = sum(trial_data[, 4 + i] > ER)
+        ap_obs = sum(trial_data[, 3 + i] > ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
         test_results[i] = ifelse(ap_obs > critval[i], 1, 0)
       } else if (alternative == "less") {
-        ap_obs = sum(trial_data[, 4 + i] < ER)
+        ap_obs = sum(trial_data[, 3 + i] < ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
         test_results[i] = ifelse(ap_obs < critval[i], 1, 0)
       }
     }
@@ -357,9 +361,9 @@ ap_test_brar <- function(trial_data, burnin, blocksize, arms_to_test, critval = 
     for (i in seq_along(arms_to_test)) {
       k = arms_to_test[i]
       if (alternative == "greater") {
-        ap_obs = sum(trial_data[, 4 + i] > ER)
+        ap_obs = sum(trial_data[, 3 + i] > ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
       } else if (alternative == "less") {
-        ap_obs = sum(trial_data[, 4 + i] < ER)
+        ap_obs = sum(trial_data[, 3 + i] < ER) # The 3 is because the first two columns are treatment and outcome, and the third is the allocation probabilities for the control arm.
       }
 
       # --- Compute p-values from empirical null distribution ---

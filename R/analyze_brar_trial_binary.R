@@ -4,7 +4,7 @@
 #' Internal helper function to calculate inference for a single trial replicate
 #' with binary outcomes.
 #'
-#' @param trial_data Data frame with columns 'Arm' and 'Outcome'; optionally 'AP arm 1', 'AP arm 2', ... if using IPW.
+#' @param trial_data Data frame with columns 'Arm' and 'Outcome'; optional columns 'AP arm 1', 'AP arm 2', ... if using methods that require the allocation probabilities.
 #' @param priors Matrix of prior parameters for Bayesian estimation.
 #' @param N Total number of patients.
 #' @param arms Number of treatment arms.
