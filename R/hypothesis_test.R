@@ -15,7 +15,6 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
   perm_stats = matrix(NA, nrow = B, ncol = arms - 1)
   p_values = numeric(length(arms_to_test))
 
-
   # Loop over all the re-rendomizations.
   for (bbb in 1:B)
   {
@@ -39,7 +38,7 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
       }
 
       # Shuffle to avoid any ordering bias.
-      # Change the treatment assigments in the permuted dataset.
+      # Change the treatment assignments in the permuted dataset.
       trial_perm$Arm[burnin_idx][burnin_idx] = sample(arm_assignments, burnin)
 
       # Update the prior parameters.
@@ -53,10 +52,10 @@ randomization_test_brar <- function(trial_data, priors, blocksize, postprobmetho
     }
 
     # Re-randomize the rest of the trial, block by block.
-    for (lll in 1:blocks)
+    for (lll in 0:blocks)
     {
-      index1 = 1:burnin + lll
-      index2 = burnin + lll: burnin + blocksize + lll
+      index1 = 1:(burnin + lll * blocksize)
+      index2 = (burnin + lll * blocksize):(burnin + blocksize + lll * blocksize)
       trial_perm$Arm[index2] = brar_randomization(trial_data = trial_perm[index1, ], priors = priors,
                                                   blocksize = blocksize, postprobmethod = postprobmethod,
                                                   multiarm_method = multiarm_method, tuning = tuning,
