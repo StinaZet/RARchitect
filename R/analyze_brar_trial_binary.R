@@ -300,8 +300,7 @@
   # --- Compute patient benefit and mean outcome ---
   best_arm = if (multiple_tests)
   {
-    exp_arm_estimates = arm_estimates[-1]
-    if (direction == "higher") which.max(exp_arm_estimates) + 1 else which.min(exp_arm_estimates) + 1
+    if (direction == "higher") which.max(arm_estimates) else which.min(arm_estimates)
   } else {
     arms_to_test[1]
   }
